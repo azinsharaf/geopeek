@@ -1,0 +1,34 @@
+package:
+  name: geopeek
+  version: 0.1.0  # Update this to match your current version
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  script: python -m pip install .
+
+requirements:
+  host:
+    - python >=3.6
+    - pip
+  run:
+    - python >=3.6
+    # Add other runtime dependencies here, e.g.
+    # - numpy
+    # - requests
+
+test:
+  imports:
+    - geopeek  # Replace with your actual package/module name
+
+about:
+  home: https://github.com/yourusername/geopeek
+  license: MIT
+  license_file: ../LICENSE
+  summary: A short description of your project
+
+extra:
+  recipe-maintainers:
+    - yourusername
