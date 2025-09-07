@@ -1,4 +1,5 @@
 import arcpy
+import typer
 
 class GeoPeek:
     def __init__(self, gdb_path):
@@ -18,8 +19,10 @@ class GeoPeek:
         for fc in feature_classes:
             print(fc)
 
-def main():
+def main(gdb_path: str):
     """Main function for geopeek."""
-    gdb_path = "path/to/your/geodatabase.gdb"  # Replace with the actual path
     geopeek = GeoPeek(gdb_path)
     geopeek.display_feature_classes()
+
+if __name__ == "__main__":
+    typer.run(main)
