@@ -29,5 +29,8 @@ def browse(gdb_path: str = typer.Argument(..., help="Path to the GIS file geodat
     """Launch the TUI for browsing a GIS dataset."""
     browse_app(gdb_path)
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "__package__" is None:
+    import sys
+    from os import path
+    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
     app()
