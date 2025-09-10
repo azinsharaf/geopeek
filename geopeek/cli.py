@@ -11,4 +11,5 @@ app = Typer()
 def info(input_file: str):
     """Print information about the input file"""
     handler = GDBHandler(input_file)
-    handler.print_gdb_info()
+    metadata = handler.get_gdb_info()
+    print_rich_table(metadata, "Geodatabase Information")
