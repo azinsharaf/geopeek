@@ -1,16 +1,14 @@
-import os
-from fiona import collection
+from geopeek.core.detectors import Detector  # Added this line
 
 class GDBHandler:
     def __init__(self, input_file):
         self.input_file = input_file
-
-    def get_feature_classes(self):
-        # Use Fiona to read the file geodatabase and get a list of feature classes
-        with collection(self.input_file) as src:
-            return [fc['properties']['name'] for fc in src]
+        self.detector = Detector(input_file)
 
     def print_info(self):
-        # Get the list of feature classes from the GDBHandler instance
-        feature_classes = self.get_feature_classes()
-        console.print(f"Feature Classes: {feature_classes}")
+        metadata = self.detector.get_metadata()
+        print_rich_table(metadata, "Metadata")
+
+    def print_gdb_info(self):
+        gdb_info = self.detector.get_gdb_info()
+        print_rich_table(gdb_info, "Geodatabase Information")

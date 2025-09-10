@@ -6,5 +6,10 @@ def print_rich_table(metadata: dict, title: str):
     console = Console()
     table = Table(title=title)
     for key, value in metadata.items():
-        table.add_row(key, str(value))
+        if isinstance(value, list):
+            # If the value is a list, add each item as a row
+            for item in value:
+                table.add_row(key, str(item))
+        else:
+            table.add_row(key, str(value))
     console.print(table)
