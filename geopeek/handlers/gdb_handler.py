@@ -1,4 +1,4 @@
-from geopeek.core.detectors import Detector  # Added this line
+from geopeek.core.detectors import Detector
 
 
 class GDBHandler:
@@ -8,8 +8,7 @@ class GDBHandler:
 
 
     def get_gdb_info(self):
-        gdb_info = self.detector.get_gdb_info()
-        return gdb_info
+        return self.detector.get_gdb_info()
 
     def print_gdb_info(self):
         gdb_info = self.detector.get_gdb_info()
