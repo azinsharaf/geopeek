@@ -11,3 +11,12 @@ class Detector:
             "Tables": ["table1", "table2"]
         }
         return gdb_info
+
+    def get_raster_info(self):
+        # Get Raster information
+        raster_info = {
+            "Raster File": self.input_file,
+            "Spatial Reference System": "EPSG:4326",
+            "Resolution": [10, 10]
+        }
+        return raster_info
