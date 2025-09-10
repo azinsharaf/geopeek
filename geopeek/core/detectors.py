@@ -1,9 +1,10 @@
-class Detector:
+# Remove the Detector class
+
+class GDBHandler(Handler):
     def __init__(self, input_file):
-        self.input_file = input_file
+        super().__init__(input_file)
 
-
-    def get_gdb_info(self):
+    def get_info(self):
         # Get Geodatabase information
         gdb_info = {
             "Database Name": self.input_file,
@@ -12,7 +13,11 @@ class Detector:
         }
         return gdb_info
 
-    def get_raster_info(self):
+class RasterHandler(Handler):
+    def __init__(self, input_file):
+        super().__init__(input_file)
+
+    def get_info(self):
         # Get Raster information
         raster_info = {
             "Raster File": self.input_file,
