@@ -1,11 +1,11 @@
 from rich.console import Console
-from typer
+import typer
 from geopeek.output.rich_printer import print_rich_table
 import os
 
 console = Console()
 
-app = Typer()
+app = typer.Typer()
 
 def _select_handler(input_file: str):
     lower = input_file.lower()
