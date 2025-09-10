@@ -1,5 +1,5 @@
 from rich.console import Console
-import typer
+from typer
 from geopeek.output.rich_printer import print_rich_table
 import os
 
