@@ -1,3 +1,3 @@
-def helper_function():
-    """A helper function for geopeek."""
-    print("This is a utility function.")
+# Initialize the geopeek package
+from .detectors import detect_file_type
+from .utils import helper_function
