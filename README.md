@@ -1,5 +1,9 @@
 # geopeek
 
+## Overview
+
+geopeek is a command-line interface (CLI) and text-based user interface (TUI) for exploring and analyzing geospatial data. It supports various file formats, including shapefiles and raster files.
+
 ## Running the CLI Script with `arcpy`
 
 To run your CLI script with `arcpy`, which is installed separately via ArcGIS Pro, you need to ensure that your Python environment is set up to use the Python interpreter that comes with ArcGIS Pro. Here's how you can do it:
@@ -40,4 +44,7 @@ If you frequently need to run your script, you can create a batch file to automa
 
 2. **Run the Batch File**: Double-click the batch file to activate the environment and run your script.
 
-By following these steps, you can ensure that your script runs with the correct Python environment that includes `arcpy`.
+## Running the TUI
+
+To launch the text-based user interface (TUI) for browsing a GIS dataset, use the following command:
+
