@@ -1,5 +1,6 @@
 from rich.console import Console
 from typer import Typer, BadParameter
+from geopeek.output.rich_printer import print_rich_table
 import os
 
 console = Console()
