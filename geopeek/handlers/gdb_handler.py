@@ -9,4 +9,3 @@ class GDBHandler:
     def print_gdb_info(self):
         gdb_info = self.detector.get_gdb_info()
         return gdb_info
-        # print_rich_table(gdb_info, "Geodatabase Information")
