@@ -41,7 +41,7 @@ class GDBHandler(Handler):
         # Attempt to use ogrinfo to enumerate layers inside the gdb
         try:
             result = subprocess.run(
-                ["ogrinfo", "-ro", "-al", self.input_file],
+                ["ogrinfo", "-ro", self.input_file],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
