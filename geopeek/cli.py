@@ -1,11 +1,13 @@
-
+from rich.console import Console
+from typer import Argument, Typer
 from .main import GeoPeek
+import sys
 
-app = typer.Typer()
+app = Typer()
 console = Console()
 
 @app.command()
-def info(gdb_path: str = typer.Argument(..., help="Path to the GIS file geodatabase")):
+def info(gdb_path: str = Argument(..., help="Path to the GIS file geodatabase")):
     """Get info about the GIS file geodatabase."""
     try:
         geopeek = GeoPeek(gdb_path)
@@ -22,8 +24,6 @@ def info(gdb_path: str = typer.Argument(..., help="Path to the GIS file geodatab
         console.print(f"Error: {e}", style="bold red")
 
 @app.command()
-def browse(gdb_path: str = typer.Argument(..., help="Path to the GIS file geodatabase")):
+def browse(gdb_path: str = Argument(..., help="Path to the GIS file geodatabase")):
     """Launch the TUI for browsing a GIS dataset."""
     pass
-
-
