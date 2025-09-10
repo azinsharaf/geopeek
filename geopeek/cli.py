@@ -1,6 +1,6 @@
-import os
 from rich.console import Console
 from typer import Argument, Typer
+from geopeek.handlers.gdb_handler import GDBHandler  # Added this line
 
 console = Console()
 
