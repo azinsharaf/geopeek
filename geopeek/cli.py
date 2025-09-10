@@ -1,5 +1,5 @@
 from rich.console import Console
-from typer import Typer, BadParameter
+import typer
 from geopeek.output.rich_printer import print_rich_table
 import os
 
@@ -19,11 +19,11 @@ def _select_handler(input_file: str):
     if lower.endswith(".gdb") or (os.path.isdir(input_file) and any(name.lower().endswith(".gdb") for name in os.listdir(input_file))):
         from geopeek.handlers.gdb_handler import GDBHandler
         return GDBHandler(input_file)
-    raise BadParameter(f"Unsupported input type: {input_file}. Please provide a .gdb directory, a .shp file, or a raster file.")
+    raise typer.BadParameter(f"Unsupported input type: {input_file}. Please provide a .gdb directory, a .shp file, or a raster file.")
 
 
-@app.command()
-def info(input_file: str):
+@app.command(name="info")
+def info_cmd(input_file: str = typer.Argument(..., help="Path to input file or directory.")):
     """Print information about the input file"""
     handler = _select_handler(input_file)
     metadata = handler.get_info()
