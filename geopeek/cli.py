@@ -1,6 +1,6 @@
 from rich.console import Console
 from typer import Argument, Typer
-from geopeek.handlers.gdb_handler import GDBHandler  # Added this line
+from geopeek.output.rich_printer import print_rich_table  # Corrected import statement
 
 console = Console()
 
