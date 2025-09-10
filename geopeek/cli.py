@@ -29,5 +29,8 @@ def info(input_file: str):
     metadata = handler.get_info()
     print_rich_table(metadata, "Geodatabase Information")
 
-if __name__ == "__main__":
+def main():
     app()
+
+if __name__ == "__main__":
+    main()
