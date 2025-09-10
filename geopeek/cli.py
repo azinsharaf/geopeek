@@ -1,6 +1,3 @@
-import typer
-from rich.table import Table
-from rich.console import Console
 
 from .main import GeoPeek
 
