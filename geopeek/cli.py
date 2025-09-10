@@ -1,17 +1,20 @@
 import os
+from rich.console import Console
 from typer import Argument, Typer
 
-def main_func():
-    app = Typer()
-    app.add_argument('action', help='Action to perform (info or browse)')
-    app.add_argument('--input_file', help='Input file path')
-    result = app(__root_dir__='/path/to/your/project/root')
-    if result.action == 'info':
-        # Handle info action here
-        print(f"Info action: {result.input_file}")
-    elif result.action == 'browse':
-        # Handle browse action here
-        print(f"Browsing: {result.input_file}")
+console = Console()
+
+app = Typer()
+
+@app.command()
+def info(input_file: str):
+    """Print information about the input file"""
+    console.print(f"Info action: {input_file}")
+
+@app.command()
+def browse(input_file: str):
+    """Browse the input file"""
+    console.print(f"Browsing: {input_file}")
 
 if __name__ == '__main__':
-    main_func()
+    app()
