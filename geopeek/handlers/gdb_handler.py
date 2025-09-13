@@ -59,7 +59,7 @@ class GDBHandler(Handler):
         except Exception:
             # If ogrinfo isn't available or any error occurs, fall back to empty list
             pass
-        return layers()
+        return layers
 
     def get_info(self) -> Dict[str, Any]:
         info: Dict[str, Any] = {
