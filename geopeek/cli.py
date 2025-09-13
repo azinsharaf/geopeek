@@ -22,15 +22,12 @@ def _select_handler(input_file: str):
     raise typer.BadParameter(f"Unsupported input type: {input_file}. Please provide a .gdb directory, a .shp file, or a raster file.")
 
 
-@app.command(name="info")
-def info_cmd(input_file: str = typer.Argument(..., help="Path to input file or directory.")):
+@app.command()
+def info(input_file: str = typer.Argument(..., help="Path to input file or directory.")):
     """Print information about the input file"""
     handler = _select_handler(input_file)
     metadata = handler.get_info()
     print_rich_table(metadata, "Geodatabase Information")
 
-def main():
-    app()
-
 if __name__ == "__main__":
-    main()
+    app()
