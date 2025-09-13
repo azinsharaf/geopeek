@@ -51,14 +51,15 @@ class GDBHandler(Handler):
                 for line in result.stdout.splitlines():
                     line = line.strip()
                     # Typical ogrinfo output contains lines like:
-                    # "Layer name: <name>"
-                    if line.lower().startswith("layer name:"):
+                    # "Layer: <name>"
+                    if line.lower().startswith("layer:"):
                         name = line.split(":", 1)[1].strip()
                         if name:
                             layers.append(name)
         except Exception:
             # If ogrinfo isn't available or any error occurs, fall back to empty list
             pass
+
         return layers
 
     def get_info(self) -> Dict[str, Any]:

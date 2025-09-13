@@ -20,6 +20,16 @@ def _select_handler(input_file: str):
         from geopeek.handlers.gdb_handler import GDBHandler
         return GDBHandler(input_file)
     raise typer.BadParameter(f"Unsupported input type: {input_file}. Please provide a .gdb directory, a .shp file, or a raster file.")
+    
+def _type_label_for(input_file: str) -> str:
+    lower = input_file.lower()
+    if lower.endswith(".shp"):
+        return "Shapefile"
+    if lower.endswith((".tif", ".tiff", ".jp2", ".png", ".jpg", ".jpeg", ".gif", ".img", ".vrt", ".dem")):
+        return "Raster"
+    if lower.endswith(".gdb") or (os.path.isdir(input_file) and any(name.lower().endswith(".gdb") for name in os.listdir(input_file))):
+        return "Geodatabase"
+    return "Input"
 
 
 @app.command()
@@ -27,7 +37,8 @@ def info(input_file: str = typer.Argument(..., help="Path to input file or direc
     """Print information about the input file"""
     handler = _select_handler(input_file)
     metadata = handler.get_info()
-    print_rich_table(metadata, "Geodatabase Information")
+    data_type = _type_label_for(input_file)
+    print_rich_table(metadata, f"{data_type} Information")
 
 if __name__ == "__main__":
     app()
