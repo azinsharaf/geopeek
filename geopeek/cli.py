@@ -1,3 +1,8 @@
+"""Geopeek CLI module.
+Note on execution:
+  - Run as module: python -m geopeek.cli info "/path/to/dataset.gdb"
+  - Run directly: python geopeek/cli.py info "/path/to/dataset.gdb"
+"""
 from rich.console import Console
 import typer
 from geopeek.output.rich_printer import print_rich_table
@@ -5,7 +10,7 @@ import os
 
 console = Console()
 
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=True)
 
 def _select_handler(input_file: str):
     lower = input_file.lower()
@@ -31,6 +36,12 @@ def _type_label_for(input_file: str) -> str:
         return "Geodatabase"
     return "Input"
 
+
+@app.callback()
+def main(ctx: typer.Context):
+    if ctx.invoked_subcommand is None:
+        console.print("No subcommand provided. Use 'info' to get dataset metadata.")
+        raise typer.Exit(code=1)
 
 @app.command()
 def info(input_file: str = typer.Argument(..., help="Path to input file or directory.")):
