@@ -8,31 +8,39 @@ import typer
 from geopeek.output.rich_printer import print_rich_table
 import os
 
+def _normalize_input_path(input_path: str) -> str:
+    # Normalize paths to be robust against trailing separators (e.g., PowerShell's trailing backslash)
+    if not isinstance(input_path, str):
+        return input_path
+    return input_path.rstrip("/\\")
+    
 console = Console()
 
 app = typer.Typer(invoke_without_command=True)
 
 def _select_handler(input_file: str):
-    lower = input_file.lower()
+    path = _normalize_input_path(input_file)
+    lower = path.lower()
     # Lazy imports to avoid importing all handlers upfront
     if lower.endswith(".shp"):
         from geopeek.handlers.shapefile_handler import ShapefileHandler
-        return ShapefileHandler(input_file)
+        return ShapefileHandler(path)
     if lower.endswith((".tif", ".tiff", ".jp2", ".png", ".jpg", ".jpeg", ".gif", ".img", ".vrt", ".dem")):
         from geopeek.handlers.raster_handler import RasterHandler
-        return RasterHandler(input_file)
-    if lower.endswith(".gdb") or (os.path.isdir(input_file) and any(name.lower().endswith(".gdb") for name in os.listdir(input_file))):
+        return RasterHandler(path)
+    if lower.endswith(".gdb") or (os.path.isdir(path) and any(name.lower().endswith(".gdb") for name in os.listdir(path))):
         from geopeek.handlers.gdb_handler import GDBHandler
-        return GDBHandler(input_file)
+        return GDBHandler(path)
     raise typer.BadParameter(f"Unsupported input type: {input_file}. Please provide a .gdb directory, a .shp file, or a raster file.")
     
 def _type_label_for(input_file: str) -> str:
-    lower = input_file.lower()
+    path = _normalize_input_path(input_file)
+    lower = path.lower()
     if lower.endswith(".shp"):
         return "Shapefile"
     if lower.endswith((".tif", ".tiff", ".jp2", ".png", ".jpg", ".jpeg", ".gif", ".img", ".vrt", ".dem")):
         return "Raster"
-    if lower.endswith(".gdb") or (os.path.isdir(input_file) and any(name.lower().endswith(".gdb") for name in os.listdir(input_file))):
+    if lower.endswith(".gdb") or (os.path.isdir(path) and any(name.lower().endswith(".gdb") for name in os.listdir(path))):
         return "Geodatabase"
     return "Input"
 
