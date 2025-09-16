@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from .handler import Handler
 
@@ -15,6 +15,39 @@ class RasterHandler(Handler):
     def __init__(self, input_file: str):
         super().__init__(input_file)
         self.input_file = input_file
+
+    def _human_readable_size(self, size_bytes: int) -> str:
+        """
+        Convert size in bytes to a human-readable string using MB or GB.
+        """
+        if size_bytes is None or size_bytes < 0:
+            return "0 MB"
+        mb = size_bytes / (1024 * 1024)
+        if mb >= 1024:
+            gb = mb / 1024
+            return f"{gb:.2f} GB"
+        else:
+            return f"{mb:.2f} MB"
+
+    def _detect_cell_size(self) -> Optional[float]:
+        """
+        Attempt to detect the raster cell size using rasterio if available.
+        Returns average of the pixel width and height in map units, or None if unavailable.
+        """
+        try:
+            from rasterio import open as rio_open
+            p = Path(self.input_file)
+            if p.is_file():
+                with rio_open(str(p)) as src:
+                    t = src.transform
+                    w = abs(t.a)
+                    h = abs(t.e)
+                    if w == 0 and h == 0:
+                        return None
+                    return (w + h) / 2.0
+        except Exception:
+            pass
+        return None
 
     def _compute_size(self, path: str) -> int:
         p = Path(path)
@@ -49,9 +82,12 @@ class RasterHandler(Handler):
         return layers
 
     def get_info(self) -> Dict[str, Any]:
+        size_bytes = self._compute_size(self.input_file)
         return {
             "type": "Raster",
             "path": str(self.input_file),
-            "size": self._compute_size(self.input_file),
+            "size": size_bytes,
+            "size_readable": self._human_readable_size(size_bytes),
+            "cell_size": self._detect_cell_size(),
             "layers": self._detect_layers(),
         }
