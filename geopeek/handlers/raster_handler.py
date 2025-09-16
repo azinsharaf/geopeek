@@ -29,10 +29,11 @@ class RasterHandler(Handler):
         else:
             return f"{mb:.2f} MB"
 
-    def _detect_cell_size(self) -> Optional[float]:
+    def _detect_cell_size(self) -> Optional[str]:
         """
         Attempt to detect the raster cell size using rasterio if available.
-        Returns average of the pixel width and height in map units, or None if unavailable.
+        Returns average of the pixel width and height in map units, with units
+        appended (e.g., "3 ft"), or None if unavailable.
         """
         try:
             from rasterio import open as rio_open
@@ -44,7 +45,40 @@ class RasterHandler(Handler):
                     h = abs(t.e)
                     if w == 0 and h == 0:
                         return None
-                    return (w + h) / 2.0
+                    avg = (w + h) / 2.0
+                    unit = self._detect_unit_label(src)
+                    if unit:
+                        if abs(avg - round(avg)) < 1e-9:
+                            return f"{int(round(avg))} {unit}"
+                        else:
+                            return f"{avg:.3f} {unit}"
+                    else:
+                        return f"{avg:.3f} units"
+        except Exception:
+            pass
+        return None
+
+    def _detect_unit_label(self, src) -> Optional[str]:
+        """
+        Try to determine the CRS units for the raster, returning a short label like
+        'm', 'ft', or 'in'. Returns None if unknown.
+        """
+        try:
+            crs = getattr(src, "crs", None)
+            if crs is None:
+                return None
+            wkt = crs.to_wkt() if hasattr(crs, "to_wkt") else ""
+            import re
+            m = re.search(r'UNIT\\[\"([^\"]+)\",', wkt)
+            if m:
+                unit_name = m.group(1).lower()
+                if "foot" in unit_name or "ft" in unit_name or "us_survey_foot" in unit_name:
+                    return "ft"
+                if "metre" in unit_name or "meter" in unit_name:
+                    return "m"
+                if "inch" in unit_name:
+                    return "in"
+                return unit_name
         except Exception:
             pass
         return None
