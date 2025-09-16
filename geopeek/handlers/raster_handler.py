@@ -35,28 +35,40 @@ class RasterHandler(Handler):
         Returns average of the pixel width and height in map units, with units
         appended (e.g., "3 ft"), or None if unavailable.
         """
+        from rasterio import open as rio_open
+        p = Path(self.input_file)
+        # If a directory is provided, pick the first raster file inside
+        path_to_use = None
+        if p.is_dir():
+            for f in sorted(p.rglob('*')):
+                if f.is_file() and f.suffix.lower() in self._RASTER_EXTS:
+                    path_to_use = str(f)
+                    break
+            if path_to_use is None:
+                return None
+        elif p.is_file():
+            path_to_use = str(p)
+        else:
+            return None
+
         try:
-            from rasterio import open as rio_open
-            p = Path(self.input_file)
-            if p.is_file():
-                with rio_open(str(p)) as src:
-                    t = src.transform
-                    w = abs(t.a)
-                    h = abs(t.e)
-                    if w == 0 and h == 0:
-                        return None
-                    avg = (w + h) / 2.0
-                    unit = self._detect_unit_label(src)
-                    if unit:
-                        if abs(avg - round(avg)) < 1e-9:
-                            return f"{int(round(avg))} {unit}"
-                        else:
-                            return f"{avg:.3f} {unit}"
+            with rio_open(path_to_use) as src:
+                t = src.transform
+                w = abs(t.a)
+                h = abs(t.e)
+                if w == 0 and h == 0:
+                    return None
+                avg = (w + h) / 2.0
+                unit = self._detect_unit_label(src)
+                if unit:
+                    if abs(avg - round(avg)) < 1e-9:
+                        return f"{int(round(avg))} {unit}"
                     else:
-                        return f"{avg:.3f} units"
+                        return f"{avg:.3f} {unit}"
+                else:
+                    return f"{avg:.3f} units"
         except Exception:
-            pass
-        return None
+            return None
 
     def _detect_unit_label(self, src) -> Optional[str]:
         """
@@ -120,8 +132,7 @@ class RasterHandler(Handler):
         return {
             "type": "Raster",
             "path": str(self.input_file),
-            "size": size_bytes,
-            "size_readable": self._human_readable_size(size_bytes),
+            "size": self._human_readable_size(size_bytes),
             "cell_size": self._detect_cell_size(),
             "layers": self._detect_layers(),
         }

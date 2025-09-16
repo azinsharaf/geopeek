@@ -15,9 +15,10 @@ requirements:
     - pip
   run:
     - python >=3.6
-    # Add other runtime dependencies here, e.g.
-    # - numpy
-    # - requests
+    - numpy
+    - gdal
+    - fiona
+    - rasterio
 
 test:
   imports:
