@@ -17,7 +17,7 @@ import os
 
 console = Console()
 
-app = typer.Typer(invoke_without_command=True)
+app = typer.Typer()
 
 
 class OutputFormat(str, Enum):
@@ -98,11 +98,12 @@ def _type_label_for(input_file: str) -> str:
     return "Input"
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
-        console.print("No subcommand provided. Use 'info' to get dataset metadata.")
-        raise typer.Exit(code=1)
+        # Show help when no subcommand is provided
+        console.print(ctx.get_help())
+        raise typer.Exit(code=0)
 
 
 @app.command()

@@ -70,7 +70,9 @@ def test_cli_layers_json_flag(monkeypatch):
     assert data["layers"] == ["layer1", "layer2"]
 
 
-def test_cli_no_subcommand():
+def test_cli_no_subcommand_shows_help():
     runner = CliRunner()
     result = runner.invoke(cli_module.app, [])
-    assert result.exit_code == 1
+    assert result.exit_code == 0
+    assert "Usage" in result.output
+    assert "info" in result.output
