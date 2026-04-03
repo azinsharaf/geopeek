@@ -51,7 +51,7 @@ geopeek info path/to/data.gdb --layers --format json
 
 ### Raster info
 
-![Raster info output](docs/images/info_rasters_dem.png)
+<img src="docs/images/info_rasters_dem.png" alt="Raster info output" width="600">
 
 ## Development
 
