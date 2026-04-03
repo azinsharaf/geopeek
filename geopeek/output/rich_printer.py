@@ -105,6 +105,7 @@ def print_rich_table(metadata: dict, title: str):
 
     layers = None
     bands = None
+    fields = None
 
     for key, val in metadata.items():
         if (
@@ -120,6 +121,10 @@ def print_rich_table(metadata: dict, title: str):
             bands = val
             table.add_row(key, f"{len(val)} bands")
             continue
+        if key == "fields" and isinstance(val, list):
+            fields = val
+            table.add_row(key, f"{len(val)} fields")
+            continue
         if key == "extent" and isinstance(val, dict):
             table.add_row(key, _format_extent(val))
             continue
@@ -128,14 +133,18 @@ def print_rich_table(metadata: dict, title: str):
     console.print()  # blank line before output
     console.print(table)
 
+    # Render top-level fields (e.g., single shapefile with flattened metadata)
+    if fields:
+        console.print(_render_fields_table(fields))
+
     # Render layer details
     if layers:
         for i, layer in enumerate(layers):
             console.print(_render_layer_panel(layer, i))
             # Show fields table for each layer
-            fields = layer.get("fields", [])
-            if fields:
-                console.print(_render_fields_table(fields))
+            layer_fields = layer.get("fields", [])
+            if layer_fields:
+                console.print(_render_fields_table(layer_fields))
                 console.print()
 
     # Render band details for rasters
