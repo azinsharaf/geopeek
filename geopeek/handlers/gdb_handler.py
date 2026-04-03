@@ -68,7 +68,8 @@ class GDBHandler(Handler):
             if srs:
                 srs.AutoIdentifyEPSG()
                 epsg = srs.GetAuthorityCode(None)
-                layer_info["crs"] = f"EPSG:{epsg}" if epsg else srs.GetName()
+                crs_name = srs.GetName()
+                layer_info["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
             else:
                 layer_info["crs"] = None
 

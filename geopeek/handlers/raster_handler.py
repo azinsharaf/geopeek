@@ -121,7 +121,8 @@ class RasterHandler(Handler):
             srs.ImportFromWkt(proj)
             srs.AutoIdentifyEPSG()
             epsg = srs.GetAuthorityCode(None)
-            detail["crs"] = f"EPSG:{epsg}" if epsg else srs.GetName()
+            crs_name = srs.GetName()
+            detail["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
 
             # Units
             if srs.IsProjected():
