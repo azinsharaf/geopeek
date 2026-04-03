@@ -35,12 +35,14 @@ def test_shapefile_handler_nonexistent_path():
     handler = ShapefileHandler("/does/not/exist")
     info = handler.get_info()
     assert info["path"] == "/does/not/exist"
-    assert info["layer_count"] == 0
-    assert info["layers"] == []
     assert info["type"] == "Shapefile"
+    # No shapefiles found — no layer keys
+    assert "layers" not in info
+    assert "layer_count" not in info
 
 
-def test_shapefile_handler_get_info_structure(tmp_path):
+def test_shapefile_handler_single_file_flattened(tmp_path):
+    """Single .shp should flatten layer metadata to top level."""
     f = tmp_path / "test.shp"
     f.write_text("dummy")
     handler = ShapefileHandler(str(f))
@@ -48,8 +50,9 @@ def test_shapefile_handler_get_info_structure(tmp_path):
     assert info["type"] == "Shapefile"
     assert info["path"] == str(f)
     assert "size" in info
-    assert "layer_count" in info
-    assert "layers" in info
+    # Single shapefile: layer detail is flattened, no 'layers' list
+    assert "layers" not in info
+    assert "layer_count" not in info
 
 
 # --- GDBHandler tests ---

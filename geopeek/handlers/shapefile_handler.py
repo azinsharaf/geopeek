@@ -120,13 +120,25 @@ class ShapefileHandler(Handler):
             "type": "Shapefile",
             "path": str(self.input_file),
             "size": self._human_readable_size(size_bytes),
-            "layer_count": len(shp_files),
         }
 
         if not shp_files:
-            info["layers"] = []
             return info
 
+        # A single .shp is always one layer — flatten its metadata to the top level
+        if len(shp_files) == 1:
+            try:
+                detail = self._get_layer_detail(shp_files[0])
+            except Exception:
+                detail = {"name": shp_files[0].stem, "error": "Failed to read"}
+            # Merge layer detail into top-level info, skip redundant 'name'
+            for key, val in detail.items():
+                if key != "name":
+                    info[key] = val
+            return info
+
+        # Multiple shapefiles in a directory — show as layers
+        info["layer_count"] = len(shp_files)
         layers = []
         for shp in shp_files:
             try:
