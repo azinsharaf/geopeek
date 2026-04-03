@@ -53,6 +53,10 @@ geopeek info path/to/data.gdb --layers --format json
 
 <img src="docs/images/info_rasters_dem.png" alt="Raster info output" width="600">
 
+### Shapefile info
+
+<img src="docs/images/info_shapefile.png" alt="Shapefile info output" width="600">
+
 ## Development
 
 ```bash
