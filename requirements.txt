@@ -1,4 +1,0 @@
-gdal
-rasterio
-typer
-rich
