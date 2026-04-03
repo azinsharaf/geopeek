@@ -38,5 +38,6 @@ def test_shapefile_handler_nonexistent_path():
     info = handler.get_info()
     assert info["path"] == "/does/not/exist"
     assert info["size"] == 0
-    assert info["layers"] == []
+    # No layers should be returned for a non-existent path (no .shp files)
+    assert info["layers"] == []  # empty list indicates no shapefiles found
     assert info["type"] == "Shapefile"
