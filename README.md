@@ -33,11 +33,11 @@ geopeek info path/to/data.gdb --layers --format json
 
 ### Supported formats
 
-| Format | Extensions |
-|---|---|
-| Shapefile | `.shp` |
-| File Geodatabase | `.gdb` |
-| Raster | `.tif`, `.tiff`, `.jp2`, `.png`, `.jpg`, `.img`, `.vrt`, `.dem` |
+| Format           | Extensions                                                      |
+| ---------------- | --------------------------------------------------------------- |
+| Shapefile        | `.shp`                                                          |
+| File Geodatabase | `.gdb`                                                          |
+| Raster           | `.tif`, `.tiff`, `.jp2`, `.png`, `.jpg`, `.img`, `.vrt`, `.dem` |
 
 ### What you get
 
