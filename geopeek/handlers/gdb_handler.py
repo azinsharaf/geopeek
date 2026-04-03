@@ -1,5 +1,4 @@
 import os
-import subprocess
 from typing import Dict, Any, List
 
 from .handler import Handler
@@ -8,21 +7,12 @@ from .handler import Handler
 class GDBHandler(Handler):
     """
     Handler for Esri File Geodatabase (.gdb) directories.
-    Provides basic metadata and attempts to enumerate layers via ogrinfo if available.
+    Uses GDAL/OGR Python bindings for layer enumeration and metadata.
     """
 
     def __init__(self, input_file: str):
         super().__init__(input_file)
         self.input_file = input_file
-        self.exists = os.path.exists(self.input_file)
-        self.is_dir = os.path.isdir(self.input_file)
-        self.name = os.path.basename(self.input_file.rstrip(os.sep)) if self.input_file else ""
-        self.size = self._compute_size(self.input_file) if self.exists else 0
-        self.layers: List[str] = []
-
-        # Try to populate layers if possible
-        if self.exists:
-            self.layers = self._detect_layers()
 
     def _compute_size(self, path: str) -> int:
         total = 0
@@ -36,50 +26,129 @@ class GDBHandler(Handler):
                     pass
         return total
 
-    def _detect_layers(self) -> List[str]:
-        layers: List[str] = []
-        # Attempt to use ogrinfo to enumerate layers inside the gdb
-        try:
-            result = subprocess.run(
-                ["ogrinfo", "-ro", self.input_file],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=15,
-            )
-            if result.returncode == 0 and result.stdout:
-                for line in result.stdout.splitlines():
-                    line = line.strip()
-                    # Typical ogrinfo output contains lines like:
-                    # "Layer: <name>"
-                    if line.lower().startswith("layer:"):
-                        name = line.split(":", 1)[1].strip()
-                        if name:
-                            layers.append(name)
-        except Exception:
-            # If ogrinfo isn't available or any error occurs, fall back to empty list
-            pass
+    def _human_readable_size(self, size_bytes: int) -> str:
+        if size_bytes < 0:
+            return "0 B"
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if size_bytes < 1024:
+                return f"{size_bytes:.2f} {unit}" if unit != "B" else f"{size_bytes} B"
+            size_bytes /= 1024
+        return f"{size_bytes:.2f} PB"
 
+    def _get_layer_details(self, ds) -> List[Dict[str, Any]]:
+        """Extract detailed info for each layer in the datasource."""
+        from osgeo import ogr
+
+        layers = []
+        for i in range(ds.GetLayerCount()):
+            layer = ds.GetLayerByIndex(i)
+            if layer is None:
+                continue
+
+            layer_info: Dict[str, Any] = {
+                "name": layer.GetName(),
+                "feature_count": layer.GetFeatureCount(),
+                "geometry_type": ogr.GeometryTypeToName(layer.GetGeomType()),
+            }
+
+            # Extent
+            try:
+                extent = layer.GetExtent()
+                layer_info["extent"] = {
+                    "xmin": extent[0],
+                    "xmax": extent[1],
+                    "ymin": extent[2],
+                    "ymax": extent[3],
+                }
+            except Exception:
+                layer_info["extent"] = None
+
+            # CRS
+            srs = layer.GetSpatialRef()
+            if srs:
+                srs.AutoIdentifyEPSG()
+                epsg = srs.GetAuthorityCode(None)
+                layer_info["crs"] = f"EPSG:{epsg}" if epsg else srs.GetName()
+            else:
+                layer_info["crs"] = None
+
+            # Fields
+            layer_defn = layer.GetLayerDefn()
+            fields = []
+            for j in range(layer_defn.GetFieldCount()):
+                field_defn = layer_defn.GetFieldDefn(j)
+                fields.append(
+                    {
+                        "name": field_defn.GetName(),
+                        "type": field_defn.GetTypeName(),
+                        "width": field_defn.GetWidth(),
+                    }
+                )
+            layer_info["fields"] = fields
+
+            layers.append(layer_info)
         return layers
 
     def get_info(self) -> Dict[str, Any]:
+        exists = os.path.exists(self.input_file)
+        name = (
+            os.path.basename(self.input_file.rstrip(os.sep)) if self.input_file else ""
+        )
+
         info: Dict[str, Any] = {
-            "type": "gdb",
+            "type": "File Geodatabase",
             "path": self.input_file,
-            "name": self.name,
-            "exists": self.exists,
-            "size": self.size,
-            "layers": self.layers,
+            "name": name,
+            "exists": exists,
         }
 
-        # If path doesn't exist or isn't a directory, return early
-        if not self.exists:
+        if not exists:
+            info["size"] = "0 B"
+            info["layer_count"] = 0
+            info["layers"] = []
             return info
 
-        # Optionally, attempt to enrich with a simple check if the path is a .gdb directory
-        if self.is_dir:
-            # Quick heuristic: Esri GDB directories contain a file named "metadata.sde" or many internal files.
-            # We avoid false positives; just keep existing info.
-            pass
+        size_bytes = self._compute_size(self.input_file)
+        info["size"] = self._human_readable_size(size_bytes)
+
+        try:
+            from osgeo import ogr
+        except ImportError:
+            info["layer_count"] = 0
+            info["layers"] = []
+            info["error"] = "GDAL Python bindings not available"
+            return info
+
+        ds = ogr.Open(self.input_file, 0)
+        if ds is None:
+            info["layer_count"] = 0
+            info["layers"] = []
+            info["error"] = "Could not open dataset with GDAL/OGR"
+            return info
+
+        try:
+            info["layer_count"] = ds.GetLayerCount()
+            info["layers"] = self._get_layer_details(ds)
+        finally:
+            ds = None  # close dataset
 
         return info
+
+    def get_layers(self) -> List[str]:
+        """Return just the layer names (for --layers flag)."""
+        try:
+            from osgeo import ogr
+        except ImportError:
+            return []
+
+        ds = ogr.Open(self.input_file, 0)
+        if ds is None:
+            return []
+        try:
+            return [
+                ds.GetLayerByIndex(i).GetName()
+                for i in range(ds.GetLayerCount())
+                if ds.GetLayerByIndex(i) is not None
+            ]
+        finally:
+            ds = None

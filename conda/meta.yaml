@@ -16,7 +16,6 @@ requirements:
   run:
     - python >=3.6
     - gdal
-    - rasterio
     - typer >=0.9
     - rich >=13.0
 
