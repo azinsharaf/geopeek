@@ -125,6 +125,7 @@ def print_rich_table(metadata: dict, title: str):
             continue
         table.add_row(key, _safe_str(val))
 
+    console.print()  # blank line before output
     console.print(table)
 
     # Render layer details
