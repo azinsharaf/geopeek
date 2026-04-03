@@ -47,6 +47,12 @@ geopeek info path/to/data.gdb --layers --format json
 
 **Rasters** — size, dimensions, cell size, CRS, extent, band info (data type, nodata, statistics), driver
 
+## Screenshots
+
+### Raster info
+
+![Raster info output](docs/images/info_rasters_dem.png)
+
 ## Development
 
 ```bash
