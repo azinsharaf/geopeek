@@ -15,10 +15,10 @@ requirements:
     - pip
   run:
     - python >=3.6
-    - numpy
     - gdal
-    - fiona
     - rasterio
+    - typer >=0.9
+    - rich >=13.0
 
 test:
   imports:

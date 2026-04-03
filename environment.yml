@@ -1,0 +1,13 @@
+name: geopeek
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - gdal
+  - rasterio
+  - typer>=0.9
+  - rich>=13.0
+  - pytest
+  - pip
+  - pip:
+    - -e .

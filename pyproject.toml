@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geopeek"
+dynamic = ["version"]
+description = "CLI and TUI tool to explore geospatial data in the terminal"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "gdal",
+    "rasterio",
+    "typer>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+geopeek = "geopeek.cli:app"
+
+[tool.setuptools-scm]
+
+[tool.setuptools.packages.find]
+include = ["geopeek*"]
