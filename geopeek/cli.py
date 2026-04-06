@@ -1,6 +1,8 @@
 """Geopeek CLI module.
 
 Usage:
+  geopeek                              # Launch TUI with file picker
+  geopeek browse <path>                # Launch TUI on dataset
   geopeek info <path>                  # Rich table output (default)
   geopeek info <path> --format json    # JSON output
   geopeek info <path> --layers         # List layer names only
@@ -107,11 +109,18 @@ def _type_label_for(input_file: str) -> str:
     return "Input"
 
 
+def _launch_tui(dataset_path=None):
+    """Launch the TUI app. Separated for testability."""
+    from geopeek.tui.app import run_tui
+
+    run_tui(dataset_path=dataset_path)
+
+
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
-        # Show help when no subcommand is provided
-        console.print(ctx.get_help())
+        # No subcommand — launch TUI with file picker
+        _launch_tui()
         raise typer.Exit(code=0)
 
 
@@ -240,6 +249,16 @@ def extent(
         print_json(data)
     else:
         print_rich_extent(data, f"{data_type} Extent")
+
+
+@app.command()
+def browse(
+    input_file: str = typer.Argument(
+        ..., help="Path to dataset to browse interactively."
+    ),
+):
+    """Launch interactive TUI to explore a dataset."""
+    _launch_tui(dataset_path=input_file)
 
 
 if __name__ == "__main__":

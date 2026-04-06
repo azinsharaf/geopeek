@@ -1,6 +1,6 @@
 # geopeek
 
-A CLI tool for exploring geospatial data in the terminal. Supports Shapefiles, File Geodatabases, and raster formats via GDAL.
+A CLI and TUI tool for exploring geospatial data in the terminal. Supports Shapefiles, File Geodatabases, and raster formats via GDAL.
 
 ## Installation
 
@@ -13,7 +13,28 @@ conda activate geopeek
 pip install -e .
 ```
 
-## Usage
+## Interactive TUI
+
+Launch the interactive terminal UI to browse and explore datasets visually.
+
+```bash
+# Open file picker to navigate to a dataset
+geopeek
+
+# Open TUI directly on a dataset
+geopeek browse path/to/data.gdb
+geopeek browse path/to/data.shp
+```
+
+The TUI features:
+- **File picker** — browse your filesystem, filtered to show only geospatial files
+- **Layer tree** — navigate layers in multi-layer datasets (e.g., geodatabases)
+- **Metadata panel** — view CRS, extent, geometry type, field summary
+- **Data grid** — preview attribute rows for vector datasets
+
+Keybindings: `q` quit, `Escape` back to file picker, `r` refresh
+
+## CLI Commands
 
 ### Dataset info
 
@@ -34,7 +55,7 @@ geopeek info path/to/data.gdb --layers --format json
 ### Data preview
 
 ```bash
-# Preview first 10 attribute rows (vector) or band statistics (raster)
+# Preview first 10 attribute rows (vector datasets only)
 geopeek peek path/to/data.shp
 geopeek peek path/to/data.gdb
 
@@ -88,7 +109,7 @@ geopeek extent path/to/data.shp --format json
 
 **`info`** — Full metadata: CRS, extent, feature count, geometry type, field schema, band info, driver
 
-**`peek`** — Data preview: first N attribute rows for vector datasets, band statistics for rasters
+**`peek`** — Data preview: first N attribute rows for vector datasets
 
 **`schema`** — Field schema: field name, type, width, precision (vector) or band number, data type, nodata, color interpretation, block size (raster)
 

@@ -6,7 +6,9 @@ dependencies:
   - gdal
   - typer>=0.9
   - rich>=13.0
+  - textual>=0.70
   - pytest
+  - pytest-asyncio
   - pip
   - pip:
     - -e .

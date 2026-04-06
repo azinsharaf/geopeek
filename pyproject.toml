@@ -13,6 +13,7 @@ dependencies = [
     "gdal",
     "typer>=0.9",
     "rich>=13.0",
+    "textual>=0.70",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +25,9 @@ dev = [
 geopeek = "geopeek.cli:app"
 
 [tool.setuptools-scm]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
 
 [tool.setuptools.packages.find]
 include = ["geopeek*"]

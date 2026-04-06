@@ -147,14 +147,6 @@ def test_cli_layers_json_flag(monkeypatch):
     assert data["layers"] == ["layer1", "layer2"]
 
 
-def test_cli_no_subcommand_shows_help():
-    runner = CliRunner()
-    result = runner.invoke(cli_module.app, [])
-    assert result.exit_code == 0
-    assert "Usage" in result.output
-    assert "info" in result.output
-
-
 # --- peek command tests ---
 
 
@@ -283,8 +275,36 @@ def test_cli_extent_with_layer(monkeypatch):
 
 def test_cli_help_shows_new_commands():
     runner = CliRunner()
-    result = runner.invoke(cli_module.app, [])
+    result = runner.invoke(cli_module.app, ["--help"])
     assert result.exit_code == 0
     assert "peek" in result.output
     assert "schema" in result.output
     assert "extent" in result.output
+
+
+def test_cli_no_subcommand_launches_tui(monkeypatch):
+    """Running geopeek with no args should launch the TUI."""
+    launched = []
+    monkeypatch.setattr(
+        cli_module,
+        "_launch_tui",
+        lambda dataset_path=None: launched.append(dataset_path),
+    )
+    runner = CliRunner()
+    result = runner.invoke(cli_module.app, [])
+    assert result.exit_code == 0
+    assert launched == [None]
+
+
+def test_cli_browse_launches_tui(monkeypatch):
+    """Running geopeek browse <path> should launch TUI on that dataset."""
+    launched = []
+    monkeypatch.setattr(
+        cli_module,
+        "_launch_tui",
+        lambda dataset_path=None: launched.append(dataset_path),
+    )
+    runner = CliRunner()
+    result = runner.invoke(cli_module.app, ["browse", "/path/to/data.gdb"])
+    assert result.exit_code == 0
+    assert launched == ["/path/to/data.gdb"]
