@@ -4,6 +4,10 @@ Usage:
   geopeek info <path>                  # Rich table output (default)
   geopeek info <path> --format json    # JSON output
   geopeek info <path> --layers         # List layer names only
+  geopeek peek <path>                  # Preview data (first 10 rows)
+  geopeek peek <path> --limit 20       # Preview more rows
+  geopeek schema <path>                # Show field/band schema
+  geopeek extent <path>                # Show bounding box extent
 """
 
 from enum import Enum
@@ -11,7 +15,12 @@ from enum import Enum
 import typer
 from rich.console import Console
 
-from geopeek.output.rich_printer import print_rich_table
+from geopeek.output.rich_printer import (
+    print_rich_table,
+    print_rich_schema,
+    print_rich_extent,
+    print_rich_peek,
+)
 from geopeek.output.json_printer import print_json
 import os
 
@@ -144,6 +153,93 @@ def info(
         print_json(metadata)
     else:
         print_rich_table(metadata, f"{data_type} Information")
+
+
+@app.command()
+def peek(
+    input_file: str = typer.Argument(..., help="Path to input file or directory."),
+    format: OutputFormat = typer.Option(
+        OutputFormat.table,
+        "--format",
+        "-f",
+        help="Output format: table or json.",
+    ),
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        help="Number of rows to preview.",
+    ),
+    layer: str = typer.Option(
+        None,
+        "--layer",
+        "-l",
+        help="Layer name (for multi-layer datasets).",
+    ),
+):
+    """Preview data rows (vector) or band statistics (raster)."""
+    handler = _select_handler(input_file)
+    data = handler.peek(limit=limit, layer_name=layer)
+    data_type = _type_label_for(input_file)
+
+    if format == OutputFormat.json:
+        print_json(data)
+    else:
+        print_rich_peek(data, f"{data_type} Preview")
+
+
+@app.command()
+def schema(
+    input_file: str = typer.Argument(..., help="Path to input file or directory."),
+    format: OutputFormat = typer.Option(
+        OutputFormat.table,
+        "--format",
+        "-f",
+        help="Output format: table or json.",
+    ),
+    layer: str = typer.Option(
+        None,
+        "--layer",
+        "-l",
+        help="Layer name (for multi-layer datasets).",
+    ),
+):
+    """Show field schema (vector) or band schema (raster)."""
+    handler = _select_handler(input_file)
+    data = handler.get_schema(layer_name=layer)
+    data_type = _type_label_for(input_file)
+
+    if format == OutputFormat.json:
+        print_json(data)
+    else:
+        print_rich_schema(data, f"{data_type} Schema")
+
+
+@app.command()
+def extent(
+    input_file: str = typer.Argument(..., help="Path to input file or directory."),
+    format: OutputFormat = typer.Option(
+        OutputFormat.table,
+        "--format",
+        "-f",
+        help="Output format: table or json.",
+    ),
+    layer: str = typer.Option(
+        None,
+        "--layer",
+        "-l",
+        help="Layer name (for multi-layer datasets).",
+    ),
+):
+    """Show bounding box extent."""
+    handler = _select_handler(input_file)
+    data = handler.get_extent(layer_name=layer)
+    data_type = _type_label_for(input_file)
+
+    if format == OutputFormat.json:
+        print_json(data)
+    else:
+        print_rich_extent(data, f"{data_type} Extent")
 
 
 if __name__ == "__main__":

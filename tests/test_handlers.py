@@ -55,6 +55,41 @@ def test_shapefile_handler_single_file_flattened(tmp_path):
     assert "layer_count" not in info
 
 
+def test_shapefile_handler_schema_no_file():
+    handler = ShapefileHandler("/does/not/exist")
+    result = handler.get_schema()
+    assert "error" in result
+
+
+def test_shapefile_handler_schema_layer_not_found(tmp_path):
+    f = tmp_path / "test.shp"
+    f.write_text("dummy")
+    handler = ShapefileHandler(str(tmp_path))
+    result = handler.get_schema(layer_name="nonexistent")
+    assert "error" in result
+
+
+def test_shapefile_handler_extent_no_file():
+    handler = ShapefileHandler("/does/not/exist")
+    result = handler.get_extent()
+    assert "error" in result
+
+
+def test_shapefile_handler_peek_no_file():
+    handler = ShapefileHandler("/does/not/exist")
+    result = handler.peek()
+    assert "error" in result
+
+
+def test_shapefile_handler_resolve_by_layer_name(tmp_path):
+    (tmp_path / "cities.shp").write_text("data")
+    (tmp_path / "rivers.shp").write_text("data2")
+    handler = ShapefileHandler(str(tmp_path))
+    shp = handler._resolve_shapefile("rivers")
+    assert shp is not None
+    assert shp.stem == "rivers"
+
+
 # --- GDBHandler tests ---
 
 
@@ -76,6 +111,24 @@ def test_gdb_handler_get_info_structure(tmp_path):
     assert info["name"] == "test.gdb"
     assert info["exists"] is True
     assert "size" in info
+
+
+def test_gdb_handler_schema_no_datasource():
+    handler = GDBHandler("/does/not/exist.gdb")
+    result = handler.get_schema()
+    assert "error" in result
+
+
+def test_gdb_handler_extent_no_datasource():
+    handler = GDBHandler("/does/not/exist.gdb")
+    result = handler.get_extent()
+    assert "error" in result
+
+
+def test_gdb_handler_peek_no_datasource():
+    handler = GDBHandler("/does/not/exist.gdb")
+    result = handler.peek()
+    assert "error" in result
 
 
 # --- RasterHandler tests ---
@@ -104,6 +157,24 @@ def test_raster_handler_detect_single_file(tmp_path):
     f.write_text("raster")
     handler = RasterHandler(str(f))
     assert handler.get_layers() == ["elevation"]
+
+
+def test_raster_handler_schema_no_file():
+    handler = RasterHandler("/does/not/exist.tif")
+    result = handler.get_schema()
+    assert "error" in result
+
+
+def test_raster_handler_extent_no_file():
+    handler = RasterHandler("/does/not/exist.tif")
+    result = handler.get_extent()
+    assert "error" in result
+
+
+def test_raster_handler_peek_no_file():
+    handler = RasterHandler("/does/not/exist.tif")
+    result = handler.peek()
+    assert "error" in result
 
 
 # --- Human readable size tests ---

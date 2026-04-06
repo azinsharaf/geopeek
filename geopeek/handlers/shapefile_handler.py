@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from .handler import Handler
 
@@ -49,6 +49,28 @@ class ShapefileHandler(Handler):
         elif p.is_file() and p.suffix.lower() == ".shp":
             return [p]
         return []
+
+    def _resolve_shapefile(self, layer_name: Optional[str] = None) -> Optional[Path]:
+        """Resolve a single shapefile path, optionally by layer name."""
+        shp_files = self._find_shapefiles()
+        if not shp_files:
+            return None
+        if layer_name:
+            for shp in shp_files:
+                if shp.stem == layer_name:
+                    return shp
+            return None
+        return shp_files[0]
+
+    def _open_layer(self, shp_path: Path):
+        """Open a shapefile and return (datasource, layer). Caller must close ds."""
+        from osgeo import ogr
+
+        ds = ogr.Open(str(shp_path), 0)
+        if ds is None:
+            return None, None
+        layer = ds.GetLayerByIndex(0)
+        return ds, layer
 
     def _get_layer_detail(self, shp_path: Path) -> Dict[str, Any]:
         """Extract detailed metadata from a single shapefile using OGR."""
@@ -152,3 +174,144 @@ class ShapefileHandler(Handler):
     def get_layers(self) -> List[str]:
         """Return just the layer names."""
         return [shp.stem for shp in self._find_shapefiles()]
+
+    def get_schema(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return field schema for a shapefile."""
+        shp_path = self._resolve_shapefile(layer_name)
+        if shp_path is None:
+            return {
+                "error": f"Layer not found: {layer_name}"
+                if layer_name
+                else "No shapefile found"
+            }
+
+        try:
+            from osgeo import ogr
+        except ImportError:
+            return {"error": "GDAL Python bindings not available"}
+
+        ds, layer = self._open_layer(shp_path)
+        if ds is None or layer is None:
+            return {"error": "Could not open with GDAL/OGR"}
+
+        try:
+            layer_defn = layer.GetLayerDefn()
+            fields = []
+            for j in range(layer_defn.GetFieldCount()):
+                field_defn = layer_defn.GetFieldDefn(j)
+                fields.append(
+                    {
+                        "name": field_defn.GetName(),
+                        "type": field_defn.GetTypeName(),
+                        "width": field_defn.GetWidth(),
+                        "precision": field_defn.GetPrecision(),
+                    }
+                )
+            return {
+                "layer": shp_path.stem,
+                "geometry_type": ogr.GeometryTypeToName(layer.GetGeomType()),
+                "field_count": len(fields),
+                "fields": fields,
+            }
+        finally:
+            ds = None
+
+    def get_extent(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return bounding box extent for a shapefile."""
+        shp_path = self._resolve_shapefile(layer_name)
+        if shp_path is None:
+            return {
+                "error": f"Layer not found: {layer_name}"
+                if layer_name
+                else "No shapefile found"
+            }
+
+        try:
+            from osgeo import ogr
+        except ImportError:
+            return {"error": "GDAL Python bindings not available"}
+
+        ds, layer = self._open_layer(shp_path)
+        if ds is None or layer is None:
+            return {"error": "Could not open with GDAL/OGR"}
+
+        try:
+            result: Dict[str, Any] = {"layer": shp_path.stem}
+
+            # CRS
+            srs = layer.GetSpatialRef()
+            if srs:
+                srs.AutoIdentifyEPSG()
+                epsg = srs.GetAuthorityCode(None)
+                crs_name = srs.GetName()
+                result["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
+            else:
+                result["crs"] = None
+
+            # Extent
+            try:
+                extent = layer.GetExtent()
+                result["extent"] = {
+                    "xmin": extent[0],
+                    "xmax": extent[1],
+                    "ymin": extent[2],
+                    "ymax": extent[3],
+                }
+            except Exception:
+                result["extent"] = None
+
+            return result
+        finally:
+            ds = None
+
+    def peek(self, limit: int = 10, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return a preview of attribute rows from the shapefile."""
+        shp_path = self._resolve_shapefile(layer_name)
+        if shp_path is None:
+            return {
+                "error": f"Layer not found: {layer_name}"
+                if layer_name
+                else "No shapefile found"
+            }
+
+        try:
+            from osgeo import ogr
+        except ImportError:
+            return {"error": "GDAL Python bindings not available"}
+
+        ds, layer = self._open_layer(shp_path)
+        if ds is None or layer is None:
+            return {"error": "Could not open with GDAL/OGR"}
+
+        try:
+            layer_defn = layer.GetLayerDefn()
+            field_names = [
+                layer_defn.GetFieldDefn(j).GetName()
+                for j in range(layer_defn.GetFieldCount())
+            ]
+
+            rows = []
+            layer.ResetReading()
+            for _ in range(limit):
+                feat = layer.GetNextFeature()
+                if feat is None:
+                    break
+                row = {"FID": feat.GetFID()}
+                for fname in field_names:
+                    row[fname] = feat.GetField(fname)
+                # Geometry type as a summary column
+                geom = feat.GetGeometryRef()
+                if geom:
+                    row["geometry"] = geom.GetGeometryName()
+                rows.append(row)
+
+            total = layer.GetFeatureCount()
+            return {
+                "layer": shp_path.stem,
+                "total_features": total,
+                "showing": len(rows),
+                "columns": ["FID"] + field_names + ["geometry"],
+                "rows": rows,
+            }
+        finally:
+            ds = None

@@ -80,6 +80,19 @@ class RasterHandler(Handler):
             return [p.stem]
         return []
 
+    def _open_dataset(self):
+        """Open the raster with GDAL and return the dataset, or None."""
+        raster_path = self._find_raster_path()
+        if raster_path is None:
+            return None
+
+        try:
+            from osgeo import gdal
+        except ImportError:
+            return None
+
+        return gdal.Open(raster_path, gdal.GA_ReadOnly)
+
     def _get_raster_detail(self, ds) -> Dict[str, Any]:
         """Extract detailed raster metadata from an open GDAL dataset."""
         from osgeo import gdal, osr
@@ -195,3 +208,131 @@ class RasterHandler(Handler):
     def get_layers(self) -> List[str]:
         """Return just the layer/file names."""
         return self._detect_layers()
+
+    def get_schema(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return band schema for the raster dataset."""
+        ds = self._open_dataset()
+        if ds is None:
+            return {"error": "Could not open raster dataset"}
+
+        try:
+            from osgeo import gdal
+
+            bands = []
+            for i in range(1, ds.RasterCount + 1):
+                band = ds.GetRasterBand(i)
+                if band is None:
+                    continue
+                band_info = {
+                    "band": i,
+                    "data_type": gdal.GetDataTypeName(band.DataType),
+                    "nodata": band.GetNoDataValue(),
+                    "color_interp": gdal.GetColorInterpretationName(
+                        band.GetColorInterpretation()
+                    ),
+                }
+                # Block size
+                block_x, block_y = band.GetBlockSize()
+                band_info["block_size"] = f"{block_x}x{block_y}"
+                bands.append(band_info)
+
+            driver = ds.GetDriver()
+            return {
+                "path": str(self.input_file),
+                "driver": driver.ShortName if driver else None,
+                "columns": ds.RasterXSize,
+                "rows": ds.RasterYSize,
+                "band_count": ds.RasterCount,
+                "bands": bands,
+            }
+        finally:
+            ds = None
+
+    def get_extent(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return bounding box extent for the raster."""
+        ds = self._open_dataset()
+        if ds is None:
+            return {"error": "Could not open raster dataset"}
+
+        try:
+            from osgeo import osr
+
+            result: Dict[str, Any] = {"path": str(self.input_file)}
+
+            gt = ds.GetGeoTransform()
+            if gt:
+                xmin = gt[0]
+                ymax = gt[3]
+                xmax = xmin + gt[1] * ds.RasterXSize
+                ymin = ymax + gt[5] * ds.RasterYSize
+                result["extent"] = {
+                    "xmin": xmin,
+                    "xmax": xmax,
+                    "ymin": ymin,
+                    "ymax": ymax,
+                }
+                result["cell_size_x"] = abs(gt[1])
+                result["cell_size_y"] = abs(gt[5])
+            else:
+                result["extent"] = None
+
+            # CRS
+            proj = ds.GetProjection()
+            if proj:
+                srs = osr.SpatialReference()
+                srs.ImportFromWkt(proj)
+                srs.AutoIdentifyEPSG()
+                epsg = srs.GetAuthorityCode(None)
+                crs_name = srs.GetName()
+                result["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
+            else:
+                result["crs"] = None
+
+            return result
+        finally:
+            ds = None
+
+    def peek(self, limit: int = 10, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return band statistics summary for the raster (rasters have no rows)."""
+        ds = self._open_dataset()
+        if ds is None:
+            return {"error": "Could not open raster dataset"}
+
+        try:
+            from osgeo import gdal
+
+            bands = []
+            for i in range(1, ds.RasterCount + 1):
+                band = ds.GetRasterBand(i)
+                if band is None:
+                    continue
+                band_info: Dict[str, Any] = {
+                    "band": i,
+                    "data_type": gdal.GetDataTypeName(band.DataType),
+                    "nodata": band.GetNoDataValue(),
+                }
+
+                # Compute statistics if not cached
+                stats = band.GetStatistics(True, True)
+                if stats and stats != [0, 0, 0, 0]:
+                    band_info["min"] = stats[0]
+                    band_info["max"] = stats[1]
+                    band_info["mean"] = round(stats[2], 4)
+                    band_info["stddev"] = round(stats[3], 4)
+
+                # Histogram summary
+                band_info["color_interp"] = gdal.GetColorInterpretationName(
+                    band.GetColorInterpretation()
+                )
+                bands.append(band_info)
+
+            return {
+                "path": str(self.input_file),
+                "columns": ds.RasterXSize,
+                "rows": ds.RasterYSize,
+                "band_count": ds.RasterCount,
+                "bands": bands,
+                "note": "Rasters do not have attribute rows. Showing band statistics.",
+            }
+        finally:
+            ds = None

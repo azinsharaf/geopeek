@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .handler import Handler
 
@@ -34,6 +34,26 @@ class GDBHandler(Handler):
                 return f"{size_bytes:.2f} {unit}" if unit != "B" else f"{size_bytes} B"
             size_bytes /= 1024
         return f"{size_bytes:.2f} PB"
+
+    def _open_datasource(self):
+        """Open the GDB and return the OGR datasource, or None."""
+        try:
+            from osgeo import ogr
+        except ImportError:
+            return None
+        try:
+            return ogr.Open(self.input_file, 0)
+        except RuntimeError:
+            return None
+
+    def _resolve_layer(self, ds, layer_name: Optional[str] = None):
+        """Get a layer from the datasource by name, or the first layer."""
+        if layer_name:
+            layer = ds.GetLayerByName(layer_name)
+            return layer
+        if ds.GetLayerCount() > 0:
+            return ds.GetLayerByIndex(0)
+        return None
 
     def _get_layer_details(self, ds) -> List[Dict[str, Any]]:
         """Extract detailed info for each layer in the datasource."""
@@ -120,7 +140,10 @@ class GDBHandler(Handler):
             info["error"] = "GDAL Python bindings not available"
             return info
 
-        ds = ogr.Open(self.input_file, 0)
+        try:
+            ds = ogr.Open(self.input_file, 0)
+        except RuntimeError:
+            ds = None
         if ds is None:
             info["layer_count"] = 0
             info["layers"] = []
@@ -142,7 +165,10 @@ class GDBHandler(Handler):
         except ImportError:
             return []
 
-        ds = ogr.Open(self.input_file, 0)
+        try:
+            ds = ogr.Open(self.input_file, 0)
+        except RuntimeError:
+            return []
         if ds is None:
             return []
         try:
@@ -151,5 +177,189 @@ class GDBHandler(Handler):
                 for i in range(ds.GetLayerCount())
                 if ds.GetLayerByIndex(i) is not None
             ]
+        finally:
+            ds = None
+
+    def get_schema(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return field schema for a GDB layer."""
+        ds = self._open_datasource()
+        if ds is None:
+            return {"error": "Could not open dataset with GDAL/OGR"}
+
+        try:
+            from osgeo import ogr
+
+            # If no layer specified and multiple layers, return all schemas
+            if layer_name is None and ds.GetLayerCount() > 1:
+                schemas = []
+                for i in range(ds.GetLayerCount()):
+                    layer = ds.GetLayerByIndex(i)
+                    if layer is None:
+                        continue
+                    layer_defn = layer.GetLayerDefn()
+                    fields = []
+                    for j in range(layer_defn.GetFieldCount()):
+                        fd = layer_defn.GetFieldDefn(j)
+                        fields.append(
+                            {
+                                "name": fd.GetName(),
+                                "type": fd.GetTypeName(),
+                                "width": fd.GetWidth(),
+                                "precision": fd.GetPrecision(),
+                            }
+                        )
+                    schemas.append(
+                        {
+                            "layer": layer.GetName(),
+                            "geometry_type": ogr.GeometryTypeToName(
+                                layer.GetGeomType()
+                            ),
+                            "field_count": len(fields),
+                            "fields": fields,
+                        }
+                    )
+                return {"layer_count": len(schemas), "schemas": schemas}
+
+            layer = self._resolve_layer(ds, layer_name)
+            if layer is None:
+                return {
+                    "error": f"Layer not found: {layer_name}"
+                    if layer_name
+                    else "No layers in dataset"
+                }
+
+            layer_defn = layer.GetLayerDefn()
+            fields = []
+            for j in range(layer_defn.GetFieldCount()):
+                fd = layer_defn.GetFieldDefn(j)
+                fields.append(
+                    {
+                        "name": fd.GetName(),
+                        "type": fd.GetTypeName(),
+                        "width": fd.GetWidth(),
+                        "precision": fd.GetPrecision(),
+                    }
+                )
+            return {
+                "layer": layer.GetName(),
+                "geometry_type": ogr.GeometryTypeToName(layer.GetGeomType()),
+                "field_count": len(fields),
+                "fields": fields,
+            }
+        finally:
+            ds = None
+
+    def get_extent(self, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return bounding box extent for a GDB layer."""
+        ds = self._open_datasource()
+        if ds is None:
+            return {"error": "Could not open dataset with GDAL/OGR"}
+
+        try:
+            # If no layer specified and multiple layers, return all extents
+            if layer_name is None and ds.GetLayerCount() > 1:
+                extents = []
+                for i in range(ds.GetLayerCount()):
+                    layer = ds.GetLayerByIndex(i)
+                    if layer is None:
+                        continue
+                    entry: Dict[str, Any] = {"layer": layer.GetName()}
+                    srs = layer.GetSpatialRef()
+                    if srs:
+                        srs.AutoIdentifyEPSG()
+                        epsg = srs.GetAuthorityCode(None)
+                        crs_name = srs.GetName()
+                        entry["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
+                    else:
+                        entry["crs"] = None
+                    try:
+                        ext = layer.GetExtent()
+                        entry["extent"] = {
+                            "xmin": ext[0],
+                            "xmax": ext[1],
+                            "ymin": ext[2],
+                            "ymax": ext[3],
+                        }
+                    except Exception:
+                        entry["extent"] = None
+                    extents.append(entry)
+                return {"layer_count": len(extents), "extents": extents}
+
+            layer = self._resolve_layer(ds, layer_name)
+            if layer is None:
+                return {
+                    "error": f"Layer not found: {layer_name}"
+                    if layer_name
+                    else "No layers in dataset"
+                }
+
+            result: Dict[str, Any] = {"layer": layer.GetName()}
+            srs = layer.GetSpatialRef()
+            if srs:
+                srs.AutoIdentifyEPSG()
+                epsg = srs.GetAuthorityCode(None)
+                crs_name = srs.GetName()
+                result["crs"] = f"EPSG:{epsg} - {crs_name}" if epsg else crs_name
+            else:
+                result["crs"] = None
+
+            try:
+                ext = layer.GetExtent()
+                result["extent"] = {
+                    "xmin": ext[0],
+                    "xmax": ext[1],
+                    "ymin": ext[2],
+                    "ymax": ext[3],
+                }
+            except Exception:
+                result["extent"] = None
+
+            return result
+        finally:
+            ds = None
+
+    def peek(self, limit: int = 10, layer_name: Optional[str] = None) -> Dict[str, Any]:
+        """Return a preview of attribute rows from a GDB layer."""
+        ds = self._open_datasource()
+        if ds is None:
+            return {"error": "Could not open dataset with GDAL/OGR"}
+
+        try:
+            layer = self._resolve_layer(ds, layer_name)
+            if layer is None:
+                return {
+                    "error": f"Layer not found: {layer_name}"
+                    if layer_name
+                    else "No layers in dataset"
+                }
+
+            layer_defn = layer.GetLayerDefn()
+            field_names = [
+                layer_defn.GetFieldDefn(j).GetName()
+                for j in range(layer_defn.GetFieldCount())
+            ]
+
+            rows = []
+            layer.ResetReading()
+            for _ in range(limit):
+                feat = layer.GetNextFeature()
+                if feat is None:
+                    break
+                row = {"FID": feat.GetFID()}
+                for fname in field_names:
+                    row[fname] = feat.GetField(fname)
+                geom = feat.GetGeometryRef()
+                if geom:
+                    row["geometry"] = geom.GetGeometryName()
+                rows.append(row)
+
+            total = layer.GetFeatureCount()
+            return {
+                "layer": layer.GetName(),
+                "total_features": total,
+                "showing": len(rows),
+                "columns": ["FID"] + field_names + ["geometry"],
+                "rows": rows,
+            }
         finally:
             ds = None

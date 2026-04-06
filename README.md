@@ -31,6 +31,51 @@ geopeek info path/to/data.gdb --layers
 geopeek info path/to/data.gdb --layers --format json
 ```
 
+### Data preview
+
+```bash
+# Preview first 10 attribute rows (vector) or band statistics (raster)
+geopeek peek path/to/data.shp
+geopeek peek path/to/data.gdb
+
+# Show more rows
+geopeek peek path/to/data.shp --limit 50
+
+# Preview a specific layer in a multi-layer dataset
+geopeek peek path/to/data.gdb --layer buildings
+
+# JSON output
+geopeek peek path/to/data.shp --format json
+```
+
+### Field/band schema
+
+```bash
+# Show field schema (vector) or band schema (raster)
+geopeek schema path/to/data.shp
+geopeek schema path/to/raster.tif
+
+# Schema for a specific layer
+geopeek schema path/to/data.gdb --layer parcels
+
+# JSON output
+geopeek schema path/to/data.gdb --format json
+```
+
+### Bounding box extent
+
+```bash
+# Show extent
+geopeek extent path/to/data.shp
+geopeek extent path/to/raster.tif
+
+# Extent for a specific layer
+geopeek extent path/to/data.gdb --layer roads
+
+# JSON output
+geopeek extent path/to/data.shp --format json
+```
+
 ### Supported formats
 
 | Format           | Extensions                                                      |
@@ -41,11 +86,13 @@ geopeek info path/to/data.gdb --layers --format json
 
 ### What you get
 
-**Shapefiles** — CRS (EPSG + name), extent, feature count, geometry type, field schema
+**`info`** — Full metadata: CRS, extent, feature count, geometry type, field schema, band info, driver
 
-**File Geodatabases** — size, layer count, per-layer CRS, extent, feature count, geometry type, field schema
+**`peek`** — Data preview: first N attribute rows for vector datasets, band statistics for rasters
 
-**Rasters** — size, dimensions, cell size, CRS, extent, band info (data type, nodata, statistics), driver
+**`schema`** — Field schema: field name, type, width, precision (vector) or band number, data type, nodata, color interpretation, block size (raster)
+
+**`extent`** — Bounding box: xmin, xmax, ymin, ymax with CRS info
 
 ## Screenshots
 
