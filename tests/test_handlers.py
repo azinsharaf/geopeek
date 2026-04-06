@@ -171,10 +171,11 @@ def test_raster_handler_extent_no_file():
     assert "error" in result
 
 
-def test_raster_handler_peek_no_file():
+def test_raster_handler_peek_not_supported():
     handler = RasterHandler("/does/not/exist.tif")
     result = handler.peek()
     assert "error" in result
+    assert "not supported" in result["error"].lower()
 
 
 # --- Human readable size tests ---

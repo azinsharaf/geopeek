@@ -278,40 +278,6 @@ def print_rich_peek(data: dict, title: str):
         console.print(f"[red]{data['error']}[/red]")
         return
 
-    # Raster peek — band statistics
-    if "bands" in data and "rows" not in data:
-        console.print()
-        note = data.get("note", "")
-        if note:
-            console.print(f"[dim]{note}[/dim]")
-        console.print(
-            f"[bold]{title}[/bold]"
-            f"  Size: {data.get('columns', '?')}x{data.get('rows', '?')}"
-            f"  Bands: {data.get('band_count', '?')}"
-        )
-        table = Table(show_header=True, show_lines=False, padding=(0, 1))
-        table.add_column("Band", justify="right")
-        table.add_column("Data Type", style="green")
-        table.add_column("NoData", style="yellow")
-        table.add_column("Min", justify="right")
-        table.add_column("Max", justify="right")
-        table.add_column("Mean", justify="right")
-        table.add_column("StdDev", justify="right")
-        table.add_column("Color", style="cyan")
-        for b in data["bands"]:
-            table.add_row(
-                str(b.get("band", "?")),
-                b.get("data_type", "?"),
-                str(b.get("nodata", "-")),
-                f"{b['min']:.2f}" if b.get("min") is not None else "-",
-                f"{b['max']:.2f}" if b.get("max") is not None else "-",
-                f"{b['mean']:.2f}" if b.get("mean") is not None else "-",
-                f"{b['stddev']:.2f}" if b.get("stddev") is not None else "-",
-                b.get("color_interp", "-"),
-            )
-        console.print(table)
-        return
-
     # Vector peek — attribute rows
     console.print()
     layer = data.get("layer", "Data")

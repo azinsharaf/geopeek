@@ -293,46 +293,8 @@ class RasterHandler(Handler):
             ds = None
 
     def peek(self, limit: int = 10, layer_name: Optional[str] = None) -> Dict[str, Any]:
-        """Return band statistics summary for the raster (rasters have no rows)."""
-        ds = self._open_dataset()
-        if ds is None:
-            return {"error": "Could not open raster dataset"}
-
-        try:
-            from osgeo import gdal
-
-            bands = []
-            for i in range(1, ds.RasterCount + 1):
-                band = ds.GetRasterBand(i)
-                if band is None:
-                    continue
-                band_info: Dict[str, Any] = {
-                    "band": i,
-                    "data_type": gdal.GetDataTypeName(band.DataType),
-                    "nodata": band.GetNoDataValue(),
-                }
-
-                # Compute statistics if not cached
-                stats = band.GetStatistics(True, True)
-                if stats and stats != [0, 0, 0, 0]:
-                    band_info["min"] = stats[0]
-                    band_info["max"] = stats[1]
-                    band_info["mean"] = round(stats[2], 4)
-                    band_info["stddev"] = round(stats[3], 4)
-
-                # Histogram summary
-                band_info["color_interp"] = gdal.GetColorInterpretationName(
-                    band.GetColorInterpretation()
-                )
-                bands.append(band_info)
-
-            return {
-                "path": str(self.input_file),
-                "columns": ds.RasterXSize,
-                "rows": ds.RasterYSize,
-                "band_count": ds.RasterCount,
-                "bands": bands,
-                "note": "Rasters do not have attribute rows. Showing band statistics.",
-            }
-        finally:
-            ds = None
+        """Peek is not supported for raster datasets."""
+        return {
+            "error": "Peek is not supported for raster datasets. "
+            "Use 'geopeek info' or 'geopeek schema' instead."
+        }
