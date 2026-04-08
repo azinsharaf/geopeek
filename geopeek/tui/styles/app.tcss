@@ -1,0 +1,112 @@
+/* Geopeek — Main app layout */
+
+/* --- Root layout: explorer (left) + content (right) --- */
+#app-layout {
+    layout: horizontal;
+    width: 100%;
+    height: 1fr;
+}
+
+/* --- Explorer panel (left side, always visible) --- */
+#explorer-panel {
+    width: 32;
+    min-width: 24;
+    height: 100%;
+}
+
+/* --- Content area (right side) --- */
+#content-area {
+    width: 1fr;
+    height: 100%;
+}
+
+/* --- TabbedContent (hidden until a dataset is selected) --- */
+#content-tabs {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+/* Tab bar styling */
+TabbedContent > ContentSwitcher {
+    width: 100%;
+    height: 1fr;
+}
+
+Tabs {
+    background: $panel;
+    height: 3;
+}
+
+Tab {
+    background: $surface-darken-1;
+    color: $text-muted;
+    padding: 0 2;
+}
+
+Tab:hover {
+    background: $surface;
+    color: $text;
+}
+
+Tab.-active {
+    background: $panel;
+    color: $accent;
+    text-style: bold;
+}
+
+Underline > .underline--bar {
+    color: $accent;
+}
+
+/* --- Tab pane content --- */
+TabPane {
+    padding: 0;
+    height: 1fr;
+}
+
+/* --- DataPanel: container for metadata + grid --- */
+#data-panel {
+    width: 100%;
+    height: 1fr;
+    layout: vertical;
+}
+
+/* --- Metadata panel (compact 2-line card at top) --- */
+#metadata-panel {
+    height: auto;
+    max-height: 6;
+    margin: 0 0 0 0;
+}
+
+#metadata-content {
+    height: auto;
+    padding: 0;
+}
+
+/* --- Grid panel (fills remaining space below metadata) --- */
+#grid-panel {
+    height: 1fr;
+    min-height: 6;
+}
+
+/* --- Welcome panel (shown when no dataset selected) --- */
+#welcome-panel {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/* --- Status indicators --- */
+.label-key {
+    color: $accent;
+    text-style: bold;
+}
+
+.label-value {
+    color: $text;
+}
+
+.label-muted {
+    color: $text-muted;
+}

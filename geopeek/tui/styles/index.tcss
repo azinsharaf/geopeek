@@ -1,0 +1,107 @@
+/* Geopeek — Global base styles */
+
+* {
+    scrollbar-color: $accent 30%;
+    scrollbar-color-hover: $accent 70%;
+    scrollbar-background: $surface-darken-1;
+    scrollbar-size-vertical: 1;
+}
+
+Screen {
+    background: $background;
+}
+
+/* --- Module container: the universal panel/card pattern --- */
+.module-container {
+    border: round $panel-lighten-2;
+    padding: 0 1;
+    background: $panel;
+}
+
+.module-container:focus {
+    border: round $accent;
+}
+
+.module-container:focus-within {
+    border: round $accent;
+}
+
+/* --- Header --- */
+Header {
+    background: $panel;
+    color: $text;
+    dock: top;
+    height: 1;
+}
+
+HeaderTitle {
+    color: $accent;
+    text-style: bold;
+}
+
+/* --- Footer --- */
+Footer {
+    background: $panel;
+    height: 1;
+}
+
+FooterKey {
+    background: $panel;
+}
+
+Footer > .footer--highlight {
+    background: $panel;
+}
+
+Footer > .footer--key {
+    background: $panel;
+    color: $accent;
+    text-style: bold;
+}
+
+Footer > .footer--highlight-key {
+    background: $surface;
+    color: $accent;
+}
+
+/* --- DataTable --- */
+DataTable {
+    background: $panel;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: $surface;
+    color: $accent;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent 25%;
+    color: $text;
+}
+
+DataTable > .datatable--hover {
+    background: $surface-lighten-1;
+}
+
+/* --- DirectoryTree --- */
+DirectoryTree {
+    background: $panel;
+    height: 1fr;
+    padding: 0;
+}
+
+Tree {
+    background: $panel;
+    height: 1fr;
+}
+
+/* --- Empty state --- */
+.empty-state {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+    color: $text-muted;
+    text-style: italic;
+}
