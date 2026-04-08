@@ -24,39 +24,60 @@ class MetadataPanel(Static):
     def compose(self) -> ComposeResult:
         yield Static("No dataset loaded.", id="metadata-content")
 
+    # Keys displayed on line 1 (quick-glance overview)
+    _LINE1_KEYS = {"type", "crs", "feature_count", "geometry_type", "size", "driver"}
+    # Keys displayed on line 2 (spatial details)
+    _LINE2_KEYS = {"extent", "layers", "fields", "bands"}
+    # Keys to skip entirely (already shown elsewhere or too verbose)
+    _SKIP_KEYS = {"path"}
+
+    # Rich markup color for metadata keys
+    _KEY_COLOR = "#94e2d5"  # Catppuccin teal
+
     def set_metadata(self, info: dict) -> None:
-        """Format and display metadata from an info dict."""
+        """Format and display metadata as two lines with colored keys."""
         try:
             content = self.query_one("#metadata-content", Static)
             line1_parts = []
             line2_parts = []
+
             for key, val in info.items():
-                if (
+                if key in self._SKIP_KEYS:
+                    continue
+
+                # Format the value based on type
+                if key == "extent" and isinstance(val, dict):
+                    formatted = (
+                        f"X:[{val.get('xmin', '?'):.4f}, {val.get('xmax', '?'):.4f}]  "
+                        f"Y:[{val.get('ymin', '?'):.4f}, {val.get('ymax', '?'):.4f}]"
+                    )
+                elif (
                     key in ("layers", "fields")
                     and isinstance(val, list)
                     and val
                     and isinstance(val[0], dict)
                 ):
-                    line1_parts.append(f"[bold]{key}:[/bold] {len(val)}")
-                    continue
-                if key == "bands" and isinstance(val, list):
-                    line1_parts.append(f"[bold]{key}:[/bold] {len(val)}")
-                    continue
-                if key == "extent" and isinstance(val, dict):
-                    ext = val
-                    line2_parts.append(
-                        f"[bold]extent:[/bold] "
-                        f"X:[{ext.get('xmin', '?'):.4f}, {ext.get('xmax', '?'):.4f}]  "
-                        f"Y:[{ext.get('ymin', '?'):.4f}, {ext.get('ymax', '?'):.4f}]"
-                    )
-                    continue
-                line1_parts.append(f"[bold]{key}:[/bold] {val}")
+                    formatted = str(len(val))
+                elif key == "bands" and isinstance(val, list):
+                    formatted = f"{len(val)} bands"
+                else:
+                    formatted = str(val)
+
+                entry = f"[bold {self._KEY_COLOR}]{key}:[/]  {formatted}"
+
+                if key in self._LINE1_KEYS:
+                    line1_parts.append(entry)
+                elif key in self._LINE2_KEYS:
+                    line2_parts.append(entry)
+                else:
+                    # Unknown keys go to line 1
+                    line1_parts.append(entry)
 
             lines = []
             if line1_parts:
-                lines.append("  ".join(line1_parts))
+                lines.append("    ".join(line1_parts))
             if line2_parts:
-                lines.append("  ".join(line2_parts))
+                lines.append("    ".join(line2_parts))
             content.update("\n".join(lines) if lines else "No metadata available.")
         except Exception:
             pass
