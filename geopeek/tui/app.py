@@ -73,9 +73,12 @@ class GeopeekApp(App):
         if self._initial_dataset:
             self._activate_dataset(self._initial_dataset)
 
-    def _activate_dataset(self, path: str) -> None:
+    def _activate_dataset(self, path: str, layer_name: str | None = None) -> None:
         """Show tabs, hide welcome, and load the dataset."""
-        self.sub_title = Path(path).name
+        if layer_name:
+            self.sub_title = f"{Path(path).name} / {layer_name}"
+        else:
+            self.sub_title = Path(path).name
 
         # Hide welcome, show tabs
         try:
@@ -91,13 +94,13 @@ class GeopeekApp(App):
 
         # Load data
         data_panel = self.query_one(DataPanel)
-        data_panel.load_dataset(path)
+        data_panel.load_dataset(path, layer_name=layer_name)
 
     def on_explorer_panel_dataset_selected(
         self, event: ExplorerPanel.DatasetSelected
     ) -> None:
         """Handle dataset selection from the explorer."""
-        self._activate_dataset(event.path)
+        self._activate_dataset(event.path, layer_name=event.layer_name)
 
     def action_refresh(self) -> None:
         """Reload the current dataset."""

@@ -131,6 +131,7 @@ class DataPanel(Static):
         super().__init__(id="data-panel")
         self._handler = None
         self._current_layer: Optional[str] = None
+        self._requested_layer: Optional[str] = None
         self._is_raster = False
         self._dataset_path: Optional[str] = None
 
@@ -138,9 +139,15 @@ class DataPanel(Static):
         yield MetadataPanel()
         yield GridPanel()
 
-    def load_dataset(self, path: str) -> None:
-        """Load a dataset and display its data."""
+    def load_dataset(self, path: str, layer_name: Optional[str] = None) -> None:
+        """Load a dataset and display its data.
+
+        Args:
+            path: Path to the dataset.
+            layer_name: Optional layer name (for multi-layer datasets like .gdb).
+        """
         self._dataset_path = path
+        self._requested_layer = layer_name
         self._load_dataset(path)
 
     def clear_dataset(self) -> None:
@@ -192,6 +199,25 @@ class DataPanel(Static):
         info = handler.get_info()
         layers = handler.get_layers()
 
+        # For a specific layer, enrich info with layer-level details
+        target_layer = self._requested_layer
+        if target_layer and target_layer in layers:
+            try:
+                schema = handler.get_schema(layer_name=target_layer)
+                extent = handler.get_extent(layer_name=target_layer)
+                layer_info = {"layer": target_layer}
+                if "error" not in schema:
+                    layer_info["geometry_type"] = schema.get("geometry_type", "-")
+                    layer_info["fields"] = schema.get("fields", [])
+                if "error" not in extent:
+                    layer_info["crs"] = extent.get("crs", "-")
+                    if extent.get("extent"):
+                        layer_info["extent"] = extent["extent"]
+                # Merge: layer-specific info overrides top-level
+                info = {**info, **layer_info}
+            except Exception:
+                pass
+
         self.app.call_from_thread(self._populate, info, layers, path)
 
     def _populate(self, info: dict, layers: list[str], path: str) -> None:
@@ -199,8 +225,13 @@ class DataPanel(Static):
         self.query_one(MetadataPanel).set_metadata(info)
 
         if layers and not self._is_raster:
-            self._current_layer = layers[0]
-            self._load_peek_data(layers[0])
+            # Use requested layer if specified and valid, otherwise first layer
+            target = self._requested_layer
+            if target and target in layers:
+                self._current_layer = target
+            else:
+                self._current_layer = layers[0]
+            self._load_peek_data(self._current_layer)
         elif self._is_raster:
             self._show_raster_info(info)
 
