@@ -36,11 +36,13 @@ geopeek browse path/to/raster.tif
 - **File explorer** -- persistent sidebar filtered to geospatial files only. Navigate your filesystem without the noise.
 - **Expandable geodatabases** -- click a `.gdb` to expand it and see all layers inside. Select any layer to inspect it.
 - **Metadata panel** -- CRS, extent, geometry type, feature count, and field summary at a glance. Displayed in a compact two-line card.
-- **Attribute grid** -- preview the first 50 attribute rows for vector datasets, or band info for rasters.
+- **Attribute grid** -- all attribute rows for vector datasets streamed progressively (first 200 shown immediately, remainder loaded in the background). Band info for rasters.
 - **Tabbed interface** -- Attributes tab is the start. More tabs (Fields, Preview) coming soon.
 - **Catppuccin Mocha theme** -- a dark color scheme that's easy on the eyes during long sessions.
 
 ### Keybindings
+
+#### General
 
 | Key | Action |
 | --- | --- |
@@ -48,7 +50,39 @@ geopeek browse path/to/raster.tif
 | `r` | Refresh current dataset |
 | `Tab` / `Shift+Tab` | Cycle focus between panels |
 | `Enter` | Select file or layer |
-| Arrow keys | Navigate explorer / data grid |
+
+#### File explorer (left panel)
+
+| Key | Action |
+| --- | --- |
+| `j` / `k` | Move cursor down / up |
+| `l` | Expand node (or enter first child if already expanded) |
+| `h` | Collapse node (or move to parent if already collapsed) |
+| `g,g` | Jump to top |
+| `G` | Jump to bottom |
+| `Ctrl+d` / `Ctrl+u` | Half-page down / up |
+| `z,z` | Centre cursor in viewport |
+| `/` | Open inline search bar |
+| `n` / `N` | Next / previous search match |
+| `Escape` | Dismiss search bar |
+| Arrow keys | Navigate (alternative to vim keys) |
+
+#### Data grid (right panel)
+
+| Key | Action |
+| --- | --- |
+| `j` / `k` | Move cursor down / up |
+| `h` / `l` | Scroll left / right |
+| `g,g` | Jump to first row |
+| `G` | Jump to last row |
+| `Ctrl+d` / `Ctrl+u` | Half-page down / up |
+| `z,z` | Centre cursor row in viewport |
+| `/` | Open inline search bar |
+| `n` / `N` | Next / previous search match |
+| `Escape` | Dismiss search bar |
+| Arrow keys | Navigate (alternative to vim keys) |
+
+> **Search highlighting** -- matched rows get a subtle background tint and the matched substring is bolded in yellow.
 
 ### Supported formats
 
