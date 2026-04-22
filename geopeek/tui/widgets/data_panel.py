@@ -11,6 +11,11 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+# How many rows to render immediately (fast first paint)
+_INITIAL_ROWS = 200
+# Rows appended per background chunk
+_CHUNK_SIZE = 500
+
 from geopeek.tui.widgets.vim_table import SearchInput, VimDataTable
 
 
@@ -301,11 +306,50 @@ class DataPanel(Static):
 
     @work(thread=True)
     def _load_peek_data(self, layer_name: str) -> None:
-        """Load peek data in background."""
+        """Load dataset rows progressively in a background thread.
+
+        Phase 1 — fast first paint:
+            Fetch the first ``_INITIAL_ROWS`` rows with the existing ``peek()``
+            call and render them immediately.
+
+        Phase 2 — background streaming:
+            If the handler exposes ``iter_rows()``, stream the remaining rows
+            in ``_CHUNK_SIZE`` chunks, appending each chunk to the live table
+            and updating the subtitle with load progress.
+        """
         if self._handler is None:
             return
-        peek_data = self._handler.peek(limit=50, layer_name=layer_name)
+
+        # --- Phase 1: immediate render of first batch ---
+        peek_data = self._handler.peek(limit=_INITIAL_ROWS, layer_name=layer_name)
         self.app.call_from_thread(self._show_peek_data, peek_data)
+
+        total: int = peek_data.get("total_features", 0)
+        loaded: int = peek_data.get("showing", 0)
+
+        # Nothing more to stream (all rows already loaded, or no iter_rows)
+        if loaded >= total or not hasattr(self._handler, "iter_rows"):
+            return
+
+        columns: list[str] = peek_data.get("columns", [])
+
+        # --- Phase 2: stream remaining rows in chunks ---
+        chunk: list[dict] = []
+        for row in self._handler.iter_rows(layer_name=layer_name, skip=loaded):
+            chunk.append(row)
+            if len(chunk) >= _CHUNK_SIZE:
+                loaded += len(chunk)
+                self.app.call_from_thread(
+                    self._append_rows, columns, list(chunk), loaded, total
+                )
+                chunk = []
+
+        if chunk:
+            loaded += len(chunk)
+            self.app.call_from_thread(self._append_rows, columns, chunk, loaded, total)
+
+        # Final subtitle once streaming is complete
+        self.app.call_from_thread(self._finish_loading, loaded, total)
 
     def _show_peek_data(self, peek_data: dict) -> None:
         """Populate the data grid with peek results."""
@@ -324,7 +368,10 @@ class DataPanel(Static):
             showing = peek_data.get("showing", 0)
 
             grid_panel.border_title = "Data"
-            grid_panel.border_subtitle = f"{showing} of {total} features"
+            if showing < total and hasattr(self._handler, "iter_rows"):
+                grid_panel.border_subtitle = f"{showing:,} / {total:,} — loading..."
+            else:
+                grid_panel.border_subtitle = f"{showing:,} of {total:,} features"
 
             if not columns or not rows:
                 return
@@ -335,6 +382,31 @@ class DataPanel(Static):
             for row in rows:
                 grid.add_row(*[str(row.get(col, "")) for col in columns])
 
+        except Exception:
+            pass
+
+    def _append_rows(
+        self,
+        columns: list[str],
+        rows: list[dict],
+        loaded: int,
+        total: int,
+    ) -> None:
+        """Append a streaming chunk of rows to the live data grid."""
+        try:
+            grid = self.query_one("#data-grid", DataTable)
+            grid_panel = self.query_one(GridPanel)
+            for row in rows:
+                grid.add_row(*[str(row.get(col, "")) for col in columns])
+            grid_panel.border_subtitle = f"{loaded:,} / {total:,} — loading..."
+        except Exception:
+            pass
+
+    def _finish_loading(self, loaded: int, total: int) -> None:
+        """Update the subtitle once all rows have been streamed."""
+        try:
+            grid_panel = self.query_one(GridPanel)
+            grid_panel.border_subtitle = f"{loaded:,} of {total:,} features"
         except Exception:
             pass
 

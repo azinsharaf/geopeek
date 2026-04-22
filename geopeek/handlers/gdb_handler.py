@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any, List, Optional
+from typing import Generator, Dict, Any, List, Optional
 
 from .handler import Handler
 
@@ -361,5 +361,57 @@ class GDBHandler(Handler):
                 "columns": ["FID"] + field_names + ["geometry"],
                 "rows": rows,
             }
+        finally:
+            ds = None
+
+    def iter_rows(
+        self,
+        layer_name: Optional[str] = None,
+        skip: int = 0,
+    ) -> Generator[Dict[str, Any], None, None]:
+        """Yield every feature row as a dict, starting from *skip*.
+
+        Designed for progressive loading: the caller controls chunking.
+        Uses ``SetNextByIndex`` for O(1) seek; falls back to iterating
+        past *skip* rows if the driver does not support random access.
+        """
+        ds = self._open_datasource()
+        if ds is None:
+            return
+
+        try:
+            layer = self._resolve_layer(ds, layer_name)
+            if layer is None:
+                return
+
+            layer_defn = layer.GetLayerDefn()
+            field_names = [
+                layer_defn.GetFieldDefn(j).GetName()
+                for j in range(layer_defn.GetFieldCount())
+            ]
+
+            # Position cursor at `skip`
+            if skip > 0:
+                try:
+                    layer.SetNextByIndex(skip)
+                except Exception:
+                    layer.ResetReading()
+                    for _ in range(skip):
+                        if layer.GetNextFeature() is None:
+                            return
+            else:
+                layer.ResetReading()
+
+            while True:
+                feat = layer.GetNextFeature()
+                if feat is None:
+                    break
+                row: Dict[str, Any] = {"FID": feat.GetFID()}
+                for fname in field_names:
+                    row[fname] = feat.GetField(fname)
+                geom = feat.GetGeometryRef()
+                if geom:
+                    row["geometry"] = geom.GetGeometryName()
+                yield row
         finally:
             ds = None
