@@ -9,6 +9,7 @@ dependencies:
   - textual>=0.70
   - pytest
   - pytest-asyncio
+  - watchfiles
   - pip
   - pip:
     - -e .
