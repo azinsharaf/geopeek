@@ -80,7 +80,11 @@ class GeoFilteredTree(DirectoryTree):
         the parent DirectoryTree handler expecting DirEntry objects."""
         if isinstance(event.node.data, dict):
             # This is a virtual layer node — don't let DirectoryTree handle it.
-            # The ExplorerPanel.on_tree_node_selected will handle it instead.
+            # prevent_default() stops the MRO walk so DirectoryTree._on_tree_node_selected
+            # is never called (it would crash doing dir_entry.path on a dict).
+            # Without calling event.stop(), the event still bubbles up to
+            # ExplorerPanel.on_tree_node_selected which handles it correctly.
+            event.prevent_default()
             return
         await super()._on_tree_node_selected(event)
 
