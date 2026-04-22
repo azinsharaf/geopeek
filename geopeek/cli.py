@@ -12,19 +12,19 @@ Usage:
   geopeek extent <path>                # Show bounding box extent
 """
 
+import os
 from enum import Enum
 
 import typer
 from rich.console import Console
 
+from geopeek.output.json_printer import print_json
 from geopeek.output.rich_printer import (
-    print_rich_table,
-    print_rich_schema,
     print_rich_extent,
     print_rich_peek,
+    print_rich_schema,
+    print_rich_table,
 )
-from geopeek.output.json_printer import print_json
-import os
 
 console = Console()
 
