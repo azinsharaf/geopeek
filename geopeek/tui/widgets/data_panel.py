@@ -11,6 +11,8 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from geopeek.tui.widgets.vim_table import SearchInput, VimDataTable
+
 
 class MetadataPanel(Static):
     """Compact horizontal metadata summary — its own bordered card."""
@@ -102,7 +104,7 @@ class MetadataPanel(Static):
 class GridPanel(Static):
     """Attribute data grid — its own bordered card."""
 
-    can_focus = False  # Focus goes to the DataTable inside
+    can_focus = False  # Focus goes to the VimDataTable inside
 
     def __init__(self) -> None:
         super().__init__(id="grid-panel", classes="module-container")
@@ -110,11 +112,43 @@ class GridPanel(Static):
         self.border_subtitle = ""
 
     def compose(self) -> ComposeResult:
-        yield DataTable(id="data-grid")
+        yield VimDataTable(id="data-grid")
+        search = SearchInput(placeholder="/  search rows...", id="grid-search")
+        search.display = False
+        yield search
 
     def on_mount(self) -> None:
-        grid = self.query_one("#data-grid", DataTable)
+        grid = self.query_one("#data-grid", VimDataTable)
         grid.cursor_type = "row"
+
+    # ------------------------------------------------------------------
+    # Grid search — triggered by VimDataTable.SearchRequested
+    # ------------------------------------------------------------------
+
+    def on_vim_data_table_search_requested(
+        self, event: VimDataTable.SearchRequested
+    ) -> None:
+        event.stop()
+        search = self.query_one("#grid-search", SearchInput)
+        search.display = True
+        search.value = ""
+        search.focus()
+
+    def on_input_changed(self, event: SearchInput.Changed) -> None:
+        if event.input.id == "grid-search":
+            self.query_one("#data-grid", VimDataTable).jump_to_search(event.value)
+
+    def on_input_submitted(self, event: SearchInput.Submitted) -> None:
+        if event.input.id == "grid-search":
+            self._hide_grid_search()
+
+    def on_search_input_dismissed(self, event: SearchInput.Dismissed) -> None:
+        self._hide_grid_search()
+
+    def _hide_grid_search(self) -> None:
+        search = self.query_one("#grid-search", SearchInput)
+        search.display = False
+        self.query_one("#data-grid", VimDataTable).focus()
 
 
 class DataPanel(Static):

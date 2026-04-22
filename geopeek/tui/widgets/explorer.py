@@ -6,11 +6,14 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from textual import work
+from textual import events, work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.message import Message
 from textual.widgets import DirectoryTree, Static, Tree
 from textual.widgets.tree import TreeNode
+
+from geopeek.tui.widgets.vim_table import SearchInput
 
 
 # Geospatial file extensions we recognize
@@ -52,14 +55,46 @@ class GeoFilteredTree(DirectoryTree):
 
     .gdb directories are shown but their internal files are hidden.
     Instead, layers are populated as virtual leaf nodes when expanded.
+
+    Vim key bindings:
+      j / k          — cursor down / up
+      l              — expand node (or enter first child if already expanded)
+      h              — collapse node (or move to parent if already collapsed)
+      g,g            — jump to top
+      G              — jump to bottom
+      ctrl+d         — half-page down
+      ctrl+u         — half-page up
+      z,z            — centre cursor in viewport
+      /              — open inline search bar
+      n / N          — next / previous search match
     """
+
+    class SearchRequested(Message):
+        """Posted when / is pressed; ExplorerPanel shows the search bar."""
 
     # Track which .gdb nodes have been populated with layers
     _gdb_populated: set[str]
 
+    BINDINGS = [
+        Binding("j", "cursor_down", show=False),
+        Binding("k", "cursor_up", show=False),
+        Binding("l", "vim_expand", show=False),
+        Binding("h", "vim_collapse", show=False),
+        Binding("g,g", "scroll_home", show=False),
+        Binding("G", "scroll_end", show=False),
+        Binding("ctrl+d", "vim_half_down", show=False),
+        Binding("ctrl+u", "vim_half_up", show=False),
+        Binding("z,z", "vim_center", show=False),
+        Binding("/", "vim_search", show=False),
+        Binding("n", "vim_search_next", show=False),
+        Binding("N", "vim_search_prev", show=False),
+    ]
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._gdb_populated = set()
+        self._search_matches: list[TreeNode] = []
+        self._search_idx: int = -1
 
     def filter_paths(self, paths: list[Path]) -> list[Path]:
         result = []
@@ -74,6 +109,98 @@ class GeoFilteredTree(DirectoryTree):
             elif p.suffix.lower() in _ALL_EXTS:
                 result.append(p)
         return result
+
+    # ------------------------------------------------------------------
+    # Vim actions
+    # ------------------------------------------------------------------
+
+    def action_vim_expand(self) -> None:
+        """l — expand node, or enter first child if already expanded."""
+        node = self.cursor_node
+        if node is None:
+            return
+        if not node.is_expanded and node.children:
+            node.expand()
+        elif node.is_expanded and node.children:
+            self.move_cursor(node.children[0])
+        else:
+            # Leaf node — trigger selection (e.g. load a GDB layer)
+            self.action_select_cursor()
+
+    def action_vim_collapse(self) -> None:
+        """h — collapse node, or move cursor to parent if already collapsed."""
+        node = self.cursor_node
+        if node is None:
+            return
+        if node.is_expanded:
+            node.collapse()
+        elif node.parent is not None and node.parent != self.root:
+            self.move_cursor(node.parent)
+
+    def action_vim_half_down(self) -> None:
+        """ctrl+d — move cursor down by half the visible height."""
+        half = max(1, self.size.height // 2)
+        for _ in range(half):
+            self.action_cursor_down()
+
+    def action_vim_half_up(self) -> None:
+        """ctrl+u — move cursor up by half the visible height."""
+        half = max(1, self.size.height // 2)
+        for _ in range(half):
+            self.action_cursor_up()
+
+    def action_vim_center(self) -> None:
+        """z,z — scroll so the cursor line is centred in the viewport."""
+        center_y = max(0, self.cursor_line - self.size.height // 2)
+        self.scroll_to(y=center_y, animate=False)
+
+    def action_vim_search(self) -> None:
+        """/ — ask ExplorerPanel to show the search bar."""
+        self.post_message(self.SearchRequested())
+
+    def action_vim_search_next(self) -> None:
+        """n — jump to the next search match."""
+        if not self._search_matches:
+            return
+        self._search_idx = (self._search_idx + 1) % len(self._search_matches)
+        self.move_cursor(self._search_matches[self._search_idx])
+
+    def action_vim_search_prev(self) -> None:
+        """N — jump to the previous search match."""
+        if not self._search_matches:
+            return
+        self._search_idx = (self._search_idx - 1) % len(self._search_matches)
+        self.move_cursor(self._search_matches[self._search_idx])
+
+    # ------------------------------------------------------------------
+    # Search logic
+    # ------------------------------------------------------------------
+
+    def jump_to_search(self, query: str) -> None:
+        """Collect all nodes whose label contains *query* and jump to first."""
+        self._search_matches = []
+        self._search_idx = -1
+        if not query:
+            return
+        q = query.lower()
+        for node in self._iter_all_nodes(self.root):
+            if q in str(node.label).strip().lower():
+                self._search_matches.append(node)
+        if self._search_matches:
+            self._search_idx = 0
+            self.move_cursor(self._search_matches[0])
+
+    def _iter_all_nodes(self, node: TreeNode) -> list[TreeNode]:
+        """Recursively collect every descendant of *node*."""
+        result: list[TreeNode] = []
+        for child in node.children:
+            result.append(child)
+            result.extend(self._iter_all_nodes(child))
+        return result
+
+    # ------------------------------------------------------------------
+    # Internal overrides
+    # ------------------------------------------------------------------
 
     async def _on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         """Override to skip virtual layer nodes (dict data) that would crash
@@ -110,6 +237,42 @@ class ExplorerPanel(Static):
 
     def compose(self) -> ComposeResult:
         yield GeoFilteredTree(self._start_path, id="dir-tree")
+        search = SearchInput(placeholder="/  search tree...", id="tree-search")
+        search.display = False
+        yield search
+
+    # ------------------------------------------------------------------
+    # Tree search — triggered by GeoFilteredTree.SearchRequested
+    # ------------------------------------------------------------------
+
+    def on_geo_filtered_tree_search_requested(
+        self, event: GeoFilteredTree.SearchRequested
+    ) -> None:
+        event.stop()
+        search = self.query_one("#tree-search", SearchInput)
+        search.display = True
+        search.value = ""
+        search.focus()
+
+    def on_input_changed(self, event: SearchInput.Changed) -> None:
+        if event.input.id == "tree-search":
+            self.query_one("#dir-tree", GeoFilteredTree).jump_to_search(event.value)
+
+    def on_input_submitted(self, event: SearchInput.Submitted) -> None:
+        if event.input.id == "tree-search":
+            self._hide_tree_search()
+
+    def on_search_input_dismissed(self, event: SearchInput.Dismissed) -> None:
+        self._hide_tree_search()
+
+    def _hide_tree_search(self) -> None:
+        search = self.query_one("#tree-search", SearchInput)
+        search.display = False
+        self.query_one("#dir-tree", GeoFilteredTree).focus()
+
+    # ------------------------------------------------------------------
+    # File / directory selection
+    # ------------------------------------------------------------------
 
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected

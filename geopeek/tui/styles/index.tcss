@@ -105,3 +105,13 @@ Tree {
     color: $text-muted;
     text-style: italic;
 }
+
+/* --- Vim search inputs (tree + grid) --- */
+#tree-search,
+#grid-search {
+    height: 1;
+    border: none;
+    background: $surface;
+    color: $text;
+    padding: 0 1;
+}
