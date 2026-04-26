@@ -200,12 +200,18 @@ class GDBHandler(Handler):
                     fields = []
                     for j in range(layer_defn.GetFieldCount()):
                         fd = layer_defn.GetFieldDefn(j)
+                        try:
+                            alias = fd.GetAlternativeNameRef() or ""
+                        except Exception:
+                            alias = ""
                         fields.append(
                             {
                                 "name": fd.GetName(),
+                                "alias": alias,
                                 "type": fd.GetTypeName(),
                                 "width": fd.GetWidth(),
                                 "precision": fd.GetPrecision(),
+                                "nullable": bool(fd.IsNullable()),
                             }
                         )
                     schemas.append(
@@ -232,12 +238,18 @@ class GDBHandler(Handler):
             fields = []
             for j in range(layer_defn.GetFieldCount()):
                 fd = layer_defn.GetFieldDefn(j)
+                try:
+                    alias = fd.GetAlternativeNameRef() or ""
+                except Exception:
+                    alias = ""
                 fields.append(
                     {
                         "name": fd.GetName(),
+                        "alias": alias,
                         "type": fd.GetTypeName(),
                         "width": fd.GetWidth(),
                         "precision": fd.GetPrecision(),
+                        "nullable": bool(fd.IsNullable()),
                     }
                 )
             return {

@@ -238,22 +238,34 @@ class DataPanel(Static):
         info = handler.get_info()
         layers = handler.get_layers()
 
-        # For a specific layer, enrich info with layer-level details
         target_layer = self._requested_layer
         if target_layer and target_layer in layers:
+            # When a specific layer is selected, build a clean metadata dict
+            # for that layer only — don't pollute with dataset-level info
+            # (e.g. GDB size, layer count, full layers list).
             try:
                 schema = handler.get_schema(layer_name=target_layer)
                 extent = handler.get_extent(layer_name=target_layer)
-                layer_info = {"layer": target_layer}
+
+                layer_info: dict = {"type": "Feature Class", "layer": target_layer}
+
                 if "error" not in schema:
                     layer_info["geometry_type"] = schema.get("geometry_type", "-")
+                    layer_info["field_count"] = schema.get("field_count", 0)
                     layer_info["fields"] = schema.get("fields", [])
+
                 if "error" not in extent:
                     layer_info["crs"] = extent.get("crs", "-")
                     if extent.get("extent"):
                         layer_info["extent"] = extent["extent"]
-                # Merge: layer-specific info overrides top-level
-                info = {**info, **layer_info}
+
+                # Pull feature_count from the dataset-level layers list
+                for lyr in info.get("layers", []):
+                    if lyr.get("name") == target_layer:
+                        layer_info["feature_count"] = lyr.get("feature_count", "?")
+                        break
+
+                info = layer_info
             except Exception:
                 pass
 

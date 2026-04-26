@@ -198,13 +198,20 @@ class ShapefileHandler(Handler):
             layer_defn = layer.GetLayerDefn()
             fields = []
             for j in range(layer_defn.GetFieldCount()):
-                field_defn = layer_defn.GetFieldDefn(j)
+                fd = layer_defn.GetFieldDefn(j)
+                # Alias — shapefiles use the same name as alias (no alias support in DBF)
+                try:
+                    alias = fd.GetAlternativeNameRef() or ""
+                except Exception:
+                    alias = ""
                 fields.append(
                     {
-                        "name": field_defn.GetName(),
-                        "type": field_defn.GetTypeName(),
-                        "width": field_defn.GetWidth(),
-                        "precision": field_defn.GetPrecision(),
+                        "name": fd.GetName(),
+                        "alias": alias,
+                        "type": fd.GetTypeName(),
+                        "width": fd.GetWidth(),
+                        "precision": fd.GetPrecision(),
+                        "nullable": bool(fd.IsNullable()),
                     }
                 )
             return {

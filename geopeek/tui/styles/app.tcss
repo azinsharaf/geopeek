@@ -90,6 +90,12 @@ TabPane {
     min-height: 6;
 }
 
+/* --- Fields panel (fills the Fields tab) --- */
+#fields-panel {
+    height: 1fr;
+    min-height: 6;
+}
+
 /* --- Welcome panel (shown when no dataset selected) --- */
 #welcome-panel {
     width: 100%;

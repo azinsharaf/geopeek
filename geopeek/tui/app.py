@@ -13,6 +13,7 @@ from textual.widgets import Footer, Header, Static, TabbedContent, TabPane
 from geopeek.tui.theme import GEOPEEK_THEME
 from geopeek.tui.widgets.explorer import ExplorerPanel
 from geopeek.tui.widgets.data_panel import DataPanel
+from geopeek.tui.widgets.fields_panel import FieldsPanel
 
 
 class GeopeekApp(App):
@@ -60,6 +61,8 @@ class GeopeekApp(App):
                 with TabbedContent(id="content-tabs"):
                     with TabPane("Attributes", id="tab-attributes"):
                         yield DataPanel()
+                    with TabPane("Fields", id="tab-fields"):
+                        yield FieldsPanel()
         yield Footer()
 
     def on_mount(self) -> None:
@@ -92,9 +95,12 @@ class GeopeekApp(App):
         except Exception:
             pass
 
-        # Load data
+        # Load data into both panels
         data_panel = self.query_one(DataPanel)
         data_panel.load_dataset(path, layer_name=layer_name)
+
+        fields_panel = self.query_one(FieldsPanel)
+        fields_panel.load_dataset(path, layer_name=layer_name)
 
     def on_explorer_panel_dataset_selected(
         self, event: ExplorerPanel.DatasetSelected
