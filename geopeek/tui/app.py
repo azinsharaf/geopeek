@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Static, TabbedContent, TabPane
+from textual.widgets import Footer, Header, Static, TabbedContent, TabPane, Tabs
 
 from geopeek.tui.theme import GEOPEEK_THEME
 from geopeek.tui.widgets.explorer import ExplorerPanel
@@ -115,6 +116,119 @@ class GeopeekApp(App):
             data_panel.rebuild()
         except Exception:
             pass
+
+    # ------------------------------------------------------------------
+    # Custom Tab / Shift+Tab focus cycle
+    #
+    # Tab:       explorer → Attributes tab bar → Fields tab bar → explorer
+    # Shift+Tab: reverse
+    # ------------------------------------------------------------------
+
+    def action_focus_next(self) -> None:
+        """Tab: tree → Attributes tab → Fields tab → tree."""
+        focused = self.focused
+        try:
+            tabs_widget = self.query_one(Tabs)
+            tabbed = self.query_one("#content-tabs", TabbedContent)
+        except Exception:
+            super().action_focus_next()
+            return
+
+        if focused is not None and focused.id == "dir-tree":
+            # tree → Attributes tab bar
+            tabbed.active = "tab-attributes"
+            tabs_widget.focus()
+        elif isinstance(focused, Tabs):
+            if tabbed.active == "tab-attributes":
+                # Attributes → Fields tab bar (switch tab, keep focus on bar)
+                tabbed.active = "tab-fields"
+            else:
+                # Fields → back to explorer
+                try:
+                    self.query_one("#dir-tree").focus()
+                except Exception:
+                    pass
+        else:
+            super().action_focus_next()
+
+    def action_focus_previous(self) -> None:
+        """Shift+Tab: tree → Fields tab → Attributes tab → tree (reverse)."""
+        focused = self.focused
+        try:
+            tabs_widget = self.query_one(Tabs)
+            tabbed = self.query_one("#content-tabs", TabbedContent)
+        except Exception:
+            super().action_focus_previous()
+            return
+
+        if focused is not None and focused.id == "dir-tree":
+            # tree → Fields tab bar (end of cycle)
+            tabbed.active = "tab-fields"
+            tabs_widget.focus()
+        elif isinstance(focused, Tabs):
+            if tabbed.active == "tab-fields":
+                # Fields → Attributes tab bar
+                tabbed.active = "tab-attributes"
+            else:
+                # Attributes → back to explorer
+                try:
+                    self.query_one("#dir-tree").focus()
+                except Exception:
+                    pass
+        else:
+            super().action_focus_previous()
+
+    # ------------------------------------------------------------------
+    # h / l / Enter on the tab bar
+    # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Focus hint — show a contextual tip in the header subtitle when
+    # the tab bar is focused so users know how to navigate
+    # ------------------------------------------------------------------
+
+    def on_descendant_focus(self, event: events.DescendantFocus) -> None:
+        if isinstance(event.widget, Tabs):
+            self._pre_hint_subtitle = self.sub_title
+            self.sub_title = "enter → grid  ·  h/l  ←/→  switch tab"
+
+    def on_descendant_blur(self, event: events.DescendantBlur) -> None:
+        if isinstance(event.widget, Tabs):
+            self.sub_title = getattr(self, "_pre_hint_subtitle", "")
+
+    # ------------------------------------------------------------------
+    # h / l / Enter on the tab bar
+    # ------------------------------------------------------------------
+
+    def on_key(self, event: events.Key) -> None:
+        """Handle h/l/Enter when the tab bar has focus.
+
+        left/right arrow keys are already handled natively by Textual's
+        Tabs widget; we only need to add the vim h/l aliases and Enter.
+        """
+        if not isinstance(self.focused, Tabs):
+            return
+        try:
+            tabbed = self.query_one("#content-tabs", TabbedContent)
+        except Exception:
+            return
+
+        if event.key == "h":
+            tabbed.action_previous_tab()
+            event.stop()
+        elif event.key == "l":
+            tabbed.action_next_tab()
+            event.stop()
+        elif event.key == "enter":
+            # Dive into the active tab's grid
+            target_id = (
+                "data-grid" if tabbed.active == "tab-attributes" else "fields-grid"
+            )
+            try:
+                self.query_one(f"#{target_id}").focus()
+            except Exception:
+                pass
+            event.stop()
 
 
 def run_tui(dataset_path: Optional[str] = None) -> None:
