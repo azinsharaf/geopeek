@@ -1,2 +1,3 @@
-$cmd = "python -m geopeek"
-python -m textual run --dev -c $cmd
+$env:TEXTUAL = "debug,devtools"
+python -m geopeek $args
+Remove-Item Env:TEXTUAL -ErrorAction SilentlyContinue
