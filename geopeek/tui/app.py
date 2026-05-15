@@ -9,7 +9,7 @@ from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Static, TabbedContent, TabPane, Tabs
+from textual.widgets import Footer, Static, TabbedContent, TabPane, Tabs
 
 from geopeek.tui.theme import GEOPEEK_THEME
 from geopeek.tui.widgets.explorer import ExplorerPanel
@@ -44,7 +44,6 @@ class GeopeekApp(App):
         return {**super().get_css_variables(), **theme_vars}
 
     def compose(self) -> ComposeResult:
-        yield Header()
         with Horizontal(id="app-layout"):
             yield ExplorerPanel()
             with Vertical(id="content-area"):
