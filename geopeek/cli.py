@@ -109,11 +109,11 @@ def _type_label_for(input_file: str) -> str:
     return "Input"
 
 
-def _launch_tui(dataset_path=None):
+def _launch_tui(dataset_path=None, start_dir=None):
     """Launch the TUI app. Separated for testability."""
     from geopeek.tui.app import run_tui
 
-    run_tui(dataset_path=dataset_path)
+    run_tui(dataset_path=dataset_path, start_dir=start_dir)
 
 
 @app.callback(invoke_without_command=True)
@@ -254,11 +254,15 @@ def extent(
 @app.command()
 def browse(
     input_file: str = typer.Argument(
-        ..., help="Path to dataset to browse interactively."
+        ..., help="Path to dataset or directory to browse interactively."
     ),
 ):
-    """Launch interactive TUI to explore a dataset."""
-    _launch_tui(dataset_path=input_file)
+    """Launch interactive TUI to explore a dataset or directory."""
+    path = _normalize_input_path(input_file)
+    if os.path.isdir(path):
+        _launch_tui(start_dir=path)
+    else:
+        _launch_tui(dataset_path=path)
 
 
 if __name__ == "__main__":

@@ -34,9 +34,12 @@ class GeopeekApp(App):
         Binding("shift+tab", "focus_previous", "Prev Panel", show=False),
     ]
 
-    def __init__(self, dataset_path: Optional[str] = None) -> None:
+    def __init__(
+        self, dataset_path: Optional[str] = None, start_dir: Optional[str] = None
+    ) -> None:
         super().__init__()
         self._initial_dataset = dataset_path
+        self._start_dir = start_dir
 
     def get_css_variables(self) -> dict[str, str]:
         """Inject our Catppuccin Mocha theme."""
@@ -45,7 +48,7 @@ class GeopeekApp(App):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="app-layout"):
-            yield ExplorerPanel()
+            yield ExplorerPanel(start_path=self._start_dir)
             with Vertical(id="content-area"):
                 # Welcome panel — visible when no dataset is loaded
                 yield Static(
@@ -230,7 +233,9 @@ class GeopeekApp(App):
             event.stop()
 
 
-def run_tui(dataset_path: Optional[str] = None) -> None:
+def run_tui(
+    dataset_path: Optional[str] = None, start_dir: Optional[str] = None
+) -> None:
     """Entry point to launch the TUI."""
-    app = GeopeekApp(dataset_path=dataset_path)
+    app = GeopeekApp(dataset_path=dataset_path, start_dir=start_dir)
     app.run()
